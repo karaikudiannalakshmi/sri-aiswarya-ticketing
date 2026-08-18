@@ -43,6 +43,10 @@ function wrapText(ctx, text, maxWidth) {
   return lines
 }
 
+function formatMoney(amount) {
+  return `LKR ${Number(amount).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
 // Renders the receipt to a canvas sized exactly to its content and returns
 // it. A generous scratch canvas is used first since we don't know the
 // final height until we've laid out all the (possibly wrapped) lines.
@@ -93,6 +97,7 @@ async function renderReceiptCanvas(fields, widthDots) {
   const templeTamil = `bold 24px ${FONT_STACK}`
   const ticketBold = `bold 30px ${FONT_STACK}`
   const ticketTamil = `bold 27px ${FONT_STACK}`
+  const sectionHeading = `bold 24px ${FONT_STACK}`
   const label = `22px ${FONT_STACK}`
   const priceFont = `bold 46px ${FONT_STACK}`
   const footer = `22px ${FONT_STACK}`
@@ -101,23 +106,51 @@ async function renderReceiptCanvas(fields, widthDots) {
   center(fields.templeNameTamil, templeTamil, 30)
   divider()
 
-  center(fields.ticketName, ticketBold, 38)
-  center(fields.ticketNameTamil, ticketTamil, 34)
-  divider()
+  if (fields.kind === 'donation') {
+    // Donation receipts get their own heading, and lead with the donor's
+    // details rather than a "ticket name" - this is a receipt of what
+    // someone gave, not a ticket for what they're attending.
+    center('DONATION RECEIPT', sectionHeading, 30)
+    center('நன்கொடை ரசீது', ticketTamil, 32)
+    divider()
 
-  left(`Receipt No / ரசீது எண்: ${fields.receiptNo}`, label, 28)
-  left(`Date / தேதி: ${fields.dateStr}`, label, 28)
-  left(`Time / நேரம்: ${fields.timeStr}`, label, 28)
-  left(`Operator / நடத்துபவர்: ${fields.operator}`, label, 28)
-  if (fields.donorName) {
+    center(fields.ticketName, ticketBold, 36)
+    center(fields.ticketNameTamil, ticketTamil, 32)
+    divider()
+
+    left(`Receipt No / ரசீது எண்: ${fields.receiptNo}`, label, 28)
+    left(`Date / தேதி: ${fields.dateStr}`, label, 28)
+    left(`Time / நேரம்: ${fields.timeStr}`, label, 28)
+    divider()
+
     left(`Donor / நன்கொடையாளர்: ${fields.donorName}`, label, 28)
+    if (fields.donorAddress) {
+      left(`Address / முகவரி: ${fields.donorAddress.replace(/\n+/g, ', ')}`, label, 28)
+    }
+    left(`Received by / பெற்றவர்: ${fields.operator}`, label, 28)
+    divider()
+
+    center(formatMoney(fields.price), priceFont, 56)
+    divider()
+
+    center('May the Goddess bless you', footer, 28)
+    center('தேவியின் அருள் உங்களுக்கு கிடைக்கட்டும்', footer, 30)
+  } else {
+    center(fields.ticketName, ticketBold, 38)
+    center(fields.ticketNameTamil, ticketTamil, 34)
+    divider()
+
+    left(`Receipt No / ரசீது எண்: ${fields.receiptNo}`, label, 28)
+    left(`Date / தேதி: ${fields.dateStr}`, label, 28)
+    left(`Time / நேரம்: ${fields.timeStr}`, label, 28)
+    left(`Operator / நடத்துபவர்: ${fields.operator}`, label, 28)
+    divider()
+
+    center(formatMoney(fields.price), priceFont, 56)
+    divider()
+
+    center('Thank you / நன்றி', footer, 30)
   }
-  divider()
-
-  center(`LKR ${Number(fields.price).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, priceFont, 56)
-  divider()
-
-  center('Thank you / நன்றி', footer, 30)
   y += 24
 
   const finalHeight = Math.ceil(y / 8) * 8 // raster rows must be a multiple of 8
@@ -172,12 +205,14 @@ export async function buildBilingualTicketReceipt({
   templeNameTamil = 'ஸ்ரீ ஐஸ்வர்யா லக்ஷ்மி கோவில், கொழும்பு',
   ticketName,
   ticketNameTamil,
+  kind = 'puja',
   price,
   receiptNo,
   dateStr,
   timeStr,
   operator,
   donorName,
+  donorAddress,
   widthDots = DEFAULT_WIDTH_DOTS
 }) {
   const canvas = await renderReceiptCanvas(
@@ -186,12 +221,14 @@ export async function buildBilingualTicketReceipt({
       templeNameTamil,
       ticketName,
       ticketNameTamil,
+      kind,
       price,
       receiptNo,
       dateStr,
       timeStr,
       operator,
-      donorName
+      donorName,
+      donorAddress
     },
     widthDots
   )

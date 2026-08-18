@@ -1,8 +1,66 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Looks up this signed-in user's role from the roles/{uid} document.
+    // That document is never writable from the app - it's created by hand
+    // in the Firebase console when an account is set up, so there's no
+    // way for a signed-in operator to grant themselves admin rights.
+    function myRole() {
+      return get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && myRole() == 'admin';
+    }
+
+    // Role assignments: readable by the signed-in user themselves (so the
+    // app can check its own role), never writable by any client.
+    match /roles/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Ticket type catalog (names, prices, categories) - only an admin can
+    // create/edit/delete these; any signed-in user can read them (needed
+    // to show the Issue Ticket screen to operators).
+    match /ticketTypes/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Receipt number counters. Issuing a ticket increments the count by
+    // exactly 1 without touching the prefix/padding - that's allowed for
+    // any signed-in user (it's a normal part of issuing a ticket). Any
+    // other kind of change (setting the starting number, changing the
+    // prefix, correcting a mistake) only an admin can do, from the
+    // Receipt Numbering screen.
+    match /counters/{id} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (
+        isSignedIn() &&
+        request.resource.data.count == resource.data.count + 1 &&
+        request.resource.data.prefix == resource.data.prefix &&
+        request.resource.data.padding == resource.data.padding
+      );
+      allow delete: if false;
+    }
+
+    // Sales records. Operators can create a sale (issue a ticket/receipt)
+    // and update it once to mark it printed, but can't read back the full
+    // sales history or totals - that's reserved for the Dashboard, which
+    // only admins can see. Nothing is ever deleted, to keep the audit
+    // trail intact.
+    match /sales/{id} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if false;
     }
   }
 }

@@ -16,6 +16,7 @@ export default function TicketIssue() {
   const [selected, setSelected] = useState(null)
   const [operator, setOperator] = useState(localStorage.getItem('temple_operator') || '')
   const [donorName, setDonorName] = useState('')
+  const [donorAddress, setDonorAddress] = useState('')
   const [donationAmount, setDonationAmount] = useState('')
   const [printerName, setPrinterName] = useState(null)
   const [transports] = useState(availableTransports())
@@ -35,6 +36,7 @@ export default function TicketIssue() {
   function handleSelectTicket(ticket) {
     setSelected(ticket)
     setDonorName('')
+    setDonorAddress('')
     setDonationAmount(ticket.kind === 'donation' ? String(ticket.price) : '')
   }
 
@@ -68,6 +70,10 @@ export default function TicketIssue() {
       setMessage("Enter the donor's name first.")
       return
     }
+    if (isDonation && !donorAddress.trim()) {
+      setMessage("Enter the donor's address first.")
+      return
+    }
     const finalAmount = isDonation ? Number(donationAmount) : selected.price
     if (isDonation && (!finalAmount || finalAmount <= 0)) {
       setMessage('Enter a valid donation amount.')
@@ -80,11 +86,18 @@ export default function TicketIssue() {
         ticketTypeId: selected.id,
         ticketName: selected.name,
         ticketNameTamil: selected.nameTamil,
+        kind: selected.kind || 'puja',
         price: finalAmount,
         operator: operator.trim(),
-        donorName: isDonation ? donorName.trim() : ''
+        donorName: isDonation ? donorName.trim() : '',
+        donorAddress: isDonation ? donorAddress.trim() : ''
       })
-      setLastSale({ ...sale, ticket: { ...selected, price: finalAmount }, donorName: donorName.trim() })
+      setLastSale({
+        ...sale,
+        ticket: { ...selected, price: finalAmount },
+        donorName: donorName.trim(),
+        donorAddress: donorAddress.trim()
+      })
       setMessage(`Issued: ${sale.receiptNo}`)
     } catch (e) {
       setMessage('Error issuing ticket: ' + e.message)
@@ -107,12 +120,14 @@ export default function TicketIssue() {
       const bytes = await buildBilingualTicketReceipt({
         ticketName: lastSale.ticket.name,
         ticketNameTamil: lastSale.ticket.nameTamil,
+        kind: lastSale.ticket.kind || 'puja',
         price: lastSale.ticket.price,
         receiptNo: lastSale.receiptNo,
         dateStr: lastSale.createdAt.toLocaleDateString(),
         timeStr: lastSale.createdAt.toLocaleTimeString(),
         operator,
-        donorName: lastSale.donorName
+        donorName: lastSale.donorName,
+        donorAddress: lastSale.donorAddress
       })
       await printBytes(bytes)
       await markSalePrinted(lastSale.id)
@@ -204,6 +219,13 @@ export default function TicketIssue() {
               onChange={(e) => setDonorName(e.target.value)}
               placeholder="Donor's name"
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+            <textarea
+              value={donorAddress}
+              onChange={(e) => setDonorAddress(e.target.value)}
+              placeholder="Donor's address"
+              rows={2}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 resize-none"
             />
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">Amount</span>

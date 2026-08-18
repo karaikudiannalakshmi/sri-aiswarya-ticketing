@@ -10,10 +10,12 @@ export function exportSalesToExcel(sales, { filename = 'report.xlsx', title = 'R
     .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0))
     .map((s) => ({
       'Receipt No': s.receiptNo,
+      Type: s.kind === 'donation' ? 'Donation' : 'Puja/Ticket',
       'Date/Time': toDateStr(s.createdAt),
       'Ticket Type': s.ticketName,
       'Ticket Type (Tamil)': s.ticketNameTamil || '',
       'Donor Name': s.donorName || '',
+      'Donor Address': s.donorAddress || '',
       'Amount (LKR)': Number(s.price || 0),
       Operator: s.operator || '',
       Printed: s.printed ? 'Yes' : 'No'
@@ -21,10 +23,12 @@ export function exportSalesToExcel(sales, { filename = 'report.xlsx', title = 'R
   const txnSheet = XLSX.utils.json_to_sheet(txnRows)
   txnSheet['!cols'] = [
     { wch: 18 }, // receipt no
+    { wch: 12 }, // type
     { wch: 20 }, // date/time
     { wch: 24 }, // ticket type
     { wch: 24 }, // ticket type tamil
     { wch: 20 }, // donor name
+    { wch: 28 }, // donor address
     { wch: 14 }, // amount
     { wch: 16 }, // operator
     { wch: 8 } // printed

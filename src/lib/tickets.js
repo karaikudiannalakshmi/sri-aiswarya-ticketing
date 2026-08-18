@@ -4,7 +4,9 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  getDoc,
   getDocs,
+  setDoc,
   query,
   where,
   orderBy,
@@ -54,19 +56,65 @@ export async function deleteTicketType(id) {
   return deleteDoc(doc(db, 'ticketTypes', id))
 }
 
-// ---------- Sales / Receipt numbering ----------
+// ---------- Receipt numbering (continuous, for audit trail) ----------
+//
+// Receipt numbers never reset - they run continuously for the life of the
+// temple's records, the same way a pre-printed paper ticket book would.
+// Puja tickets and donations are numbered in two separate series (so a
+// donation receipt book and a ticket book can each be audited on their
+// own), each stored as one counter document:
+//   counters/ticketSeries    -> { prefix, padding, count }
+//   counters/donationSeries  -> { prefix, padding, count }
+// `count` is the last number issued; the next one issued is count + 1.
 
-// Daily receipt numbers reset each day: TEMPLE-YYYYMMDD-0001
-async function getNextReceiptNo(dateKey) {
-  const counterRef = doc(db, 'counters', dateKey)
-  const next = await runTransaction(db, async (tx) => {
+const SERIES = {
+  puja: 'ticketSeries',
+  donation: 'donationSeries'
+}
+
+const DEFAULT_SERIES_SETTINGS = {
+  ticketSeries: { prefix: 'T-', padding: 6, count: 0 },
+  donationSeries: { prefix: 'D-', padding: 6, count: 0 }
+}
+
+export async function getSeriesSettings(seriesId) {
+  const snap = await getDoc(doc(db, 'counters', seriesId))
+  if (snap.exists()) return snap.data()
+  return DEFAULT_SERIES_SETTINGS[seriesId] || { prefix: '', padding: 6, count: 0 }
+}
+
+export async function getAllSeriesSettings() {
+  const [ticketSeries, donationSeries] = await Promise.all([
+    getSeriesSettings('ticketSeries'),
+    getSeriesSettings('donationSeries')
+  ])
+  return { ticketSeries, donationSeries }
+}
+
+// Sets up or corrects a series: nextNumber is the number that should be
+// issued NEXT (e.g. if your existing printed books go up to 5000, set
+// nextNumber to 5001 to continue the same audit trail in this system).
+export async function setSeriesSettings(seriesId, { prefix, padding, nextNumber }) {
+  await setDoc(
+    doc(db, 'counters', seriesId),
+    { prefix, padding: Number(padding), count: Number(nextNumber) - 1 },
+    { merge: true }
+  )
+}
+
+function formatReceiptNo({ prefix, padding, number }) {
+  return `${prefix || ''}${String(number).padStart(padding || 1, '0')}`
+}
+
+async function getNextReceiptNo(seriesId) {
+  const counterRef = doc(db, 'counters', seriesId)
+  return runTransaction(db, async (tx) => {
     const snap = await tx.get(counterRef)
-    const current = snap.exists() ? snap.data().count || 0 : 0
-    const updated = current + 1
-    tx.set(counterRef, { count: updated }, { merge: true })
-    return updated
+    const current = snap.exists() ? snap.data() : DEFAULT_SERIES_SETTINGS[seriesId]
+    const nextCount = (current.count || 0) + 1
+    tx.set(counterRef, { ...current, count: nextCount }, { merge: true })
+    return formatReceiptNo({ prefix: current.prefix, padding: current.padding, number: nextCount })
   })
-  return `${dateKey}-${String(next).padStart(4, '0')}`
 }
 
 function dateKeyFor(d) {
@@ -76,18 +124,30 @@ function dateKeyFor(d) {
   return `${yyyy}${mm}${dd}`
 }
 
-export async function recordSale({ ticketTypeId, ticketName, ticketNameTamil, price, operator, donorName }) {
+export async function recordSale({
+  ticketTypeId,
+  ticketName,
+  ticketNameTamil,
+  kind = 'puja',
+  price,
+  operator,
+  donorName,
+  donorAddress
+}) {
   const now = new Date()
   const dateKey = dateKeyFor(now)
-  const receiptNo = await getNextReceiptNo(dateKey)
+  const seriesId = SERIES[kind] || SERIES.puja
+  const receiptNo = await getNextReceiptNo(seriesId)
 
   const docRef = await addDoc(salesCol, {
     ticketTypeId,
     ticketName,
     ticketNameTamil: ticketNameTamil || '',
+    kind,
     price,
     operator: operator || 'Unknown',
     donorName: donorName || '',
+    donorAddress: donorAddress || '',
     receiptNo,
     dateKey,
     printed: false,
