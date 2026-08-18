@@ -81,14 +81,12 @@ export default function Dashboard() {
   const rangeSummary = useMemo(() => (rangeSales ? summarize(rangeSales) : null), [rangeSales])
 
   return (
-    <div className="min-h-screen bg-temple-cream p-6">
+    <div className="min-h-screen bg-temple-cream p-4 md:p-6">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-temple-maroon">
-              Sri Aishwarya Lakshmi Temple
-            </h1>
-            <p className="text-gray-500">Collections Dashboard</p>
+            <h1 className="text-2xl font-bold text-temple-maroon">Dashboard</h1>
+            <p className="text-gray-500">Collections overview</p>
           </div>
           <button
             onClick={load}

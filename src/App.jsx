@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Routes, Route, Link, useNavigate } from 'react-router-dom'
+import { Routes, Route, Link } from 'react-router-dom'
 import Login from './pages/Login'
 import TicketIssue from './pages/TicketIssue'
 import Dashboard from './pages/Dashboard'
 import AdminTicketTypes from './pages/AdminTicketTypes'
+import Layout from './components/Layout'
 import { ensureAuth } from './firebase'
 
 export default function App() {
@@ -29,12 +30,14 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<TicketIssue />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/admin" element={<AdminTicketTypes />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/issue" element={<TicketIssue />} />
+        <Route path="/admin" element={<AdminTicketTypes />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Layout>
   )
 }
 
@@ -43,7 +46,7 @@ function NotFound() {
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-temple-cream">
       <p className="text-gray-500">Page not found.</p>
       <Link to="/" className="text-temple-maroon font-medium">
-        Go to Ticket Issue
+        Go to Dashboard
       </Link>
     </div>
   )

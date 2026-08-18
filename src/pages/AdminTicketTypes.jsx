@@ -59,9 +59,10 @@ export default function AdminTicketTypes() {
   }
 
   return (
-    <div className="min-h-screen bg-temple-cream p-6">
+    <div className="min-h-screen bg-temple-cream p-4 md:p-6">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold text-temple-maroon mb-6">Manage Ticket Types</h1>
+        <h1 className="text-2xl font-bold text-temple-maroon mb-1">Manage Ticket Types</h1>
+        <p className="text-gray-500 mb-6">Add, edit, or remove tickets, pujas, and donation types.</p>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow p-6 mb-8 space-y-3">
           <div className="grid grid-cols-2 gap-3">

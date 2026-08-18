@@ -10,7 +10,6 @@ import {
 } from '../lib/printer'
 import { buildTicketReceipt } from '../lib/escpos'
 import TicketButton from '../components/TicketButton'
-import { Link } from 'react-router-dom'
 
 export default function TicketIssue() {
   const [tickets, setTickets] = useState([])
@@ -106,12 +105,12 @@ export default function TicketIssue() {
 
   return (
     <div className="min-h-screen bg-temple-cream pb-32">
-      <div className="bg-temple-maroon text-white p-4 sticky top-0 z-10 shadow">
-        <h1 className="font-bold text-lg leading-tight">Sri Aishwarya Lakshmi Temple</h1>
-        <p className="text-xs opacity-80">Ticket Issue</p>
+      <div className="p-4 md:p-6 pb-4 border-b border-black/5">
+        <h1 className="font-bold text-xl text-temple-maroon">Issue Ticket</h1>
+        <p className="text-sm text-gray-500">Select a ticket, issue it, then print the receipt.</p>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="p-4 md:p-6 space-y-4 max-w-3xl">
         <input
           value={operator}
           onChange={(e) => setOperator(e.target.value)}
@@ -179,14 +178,9 @@ export default function TicketIssue() {
             {message}
           </div>
         )}
-
-        <div className="flex gap-4 text-xs text-gray-400 justify-center pt-4">
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/admin">Manage Ticket Types</Link>
-        </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3">
+      <div className="fixed bottom-0 left-0 md:left-64 right-0 bg-white border-t border-gray-200 p-4 flex gap-3 max-w-3xl">
         <button
           onClick={handleIssue}
           disabled={busy || !selected}
