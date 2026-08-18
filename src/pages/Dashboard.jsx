@@ -6,6 +6,7 @@ import {
   startOfMonth
 } from '../lib/tickets'
 import { exportSalesToExcel } from '../lib/excelExport'
+import { formatCurrency } from '../lib/currency'
 
 function summarize(sales) {
   const total = sales.reduce((sum, s) => sum + Number(s.price || 0), 0)
@@ -105,7 +106,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-sm text-gray-500 uppercase tracking-wide">Today</p>
                 <p className="text-4xl font-bold text-temple-maroon mt-1">
-                  Rs. {todaySummary.total.toFixed(2)}
+                  {formatCurrency(todaySummary.total)}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">{todaySummary.count} tickets</p>
               </div>
@@ -121,7 +122,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-sm text-gray-500 uppercase tracking-wide">This Month</p>
                 <p className="text-4xl font-bold text-temple-maroon mt-1">
-                  Rs. {monthSummary.total.toFixed(2)}
+                  {formatCurrency(monthSummary.total)}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">{monthSummary.count} tickets</p>
               </div>
@@ -180,7 +181,7 @@ export default function Dashboard() {
             <>
               <p className="mb-3 text-gray-700">
                 <span className="font-bold text-temple-maroon">
-                  Rs. {rangeSummary.total.toFixed(2)}
+                  {formatCurrency(rangeSummary.total)}
                 </span>{' '}
                 across {rangeSummary.count} tickets ({rangeStart} to {rangeEnd})
               </p>
@@ -226,7 +227,7 @@ function BreakdownTable({ title, byTicket }) {
               <tr key={name} className="border-b last:border-0">
                 <td className="py-2">{name}</td>
                 <td className="py-2 text-right">{data.count}</td>
-                <td className="py-2 text-right">Rs. {data.total.toFixed(2)}</td>
+                <td className="py-2 text-right">{formatCurrency(data.total)}</td>
               </tr>
             ))}
           </tbody>

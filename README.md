@@ -14,7 +14,48 @@ donations, and receipts.
 - **Manage Ticket Types** (`/admin`) - add/edit/delete ticket types, their
   category, and price.
 
-## Two ways to print - phone (Bluetooth) or PC (USB)
+## Puja tickets vs. Donations
+
+These are treated as two different kinds of ticket type in `/admin`:
+
+- **Puja / Ticket** - a fixed-price item (a specific puja, agal vilaku,
+  etc). The operator just taps it and issues - no extra fields needed.
+- **Donation** - the operator is asked for the **donor's name** when
+  issuing, and can enter the actual amount given (the price set in
+  `/admin` is only a suggested starting value, editable per donation).
+  The donor's name prints on the receipt and appears in the Excel export.
+
+This split exists because a puja ticket only ever needs a name, while a
+donation only ever needs a donor's name - trying to force both into one
+"name" field didn't fit either case well.
+
+## Currency
+
+All amounts are shown and printed in **LKR**. This is set in one place -
+`src/lib/currency.js` - if it ever needs to change.
+
+## Bilingual (English + Tamil) receipts
+
+Cheap ESC/POS thermal printers only have English/Latin characters built
+into their firmware - there's no way to make them print Tamil script as
+text, no matter what font is installed on the phone or PC. To work around
+this, receipts are drawn as a picture (English + Tamil together, using the
+bundled Noto Sans Tamil font) and sent to the printer as a bitmap instead
+of as text. This works on any ESC/POS printer since bitmap printing doesn't
+depend on the printer's built-in fonts at all.
+
+Practical effects of this:
+- Printing takes slightly longer than plain text (a picture is more data
+  than a string of characters), typically well under a second extra.
+- Add both an English and a Tamil name for each ticket type in `/admin` -
+  the Tamil name is optional; if left blank, only English prints.
+- The receipt bitmap defaults to 384 dots wide (58mm paper). If your
+  printer uses 80mm paper, change the default in
+  `src/lib/receiptImage.js` (`DEFAULT_WIDTH_DOTS = 576`).
+- The on-screen ticket buttons and admin list also show both languages;
+  only the printed receipt required the bitmap workaround.
+
+
 
 The Ticket Issue screen (`/`) works from either a phone or a PC, and can
 connect to either kind of printer:

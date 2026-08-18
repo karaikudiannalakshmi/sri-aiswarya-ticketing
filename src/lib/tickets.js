@@ -25,8 +25,25 @@ export async function fetchTicketTypes() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
 
-export async function addTicketType({ name, category, price, order = 0 }) {
-  return addDoc(ticketTypesCol, { name, category, price, order, active: true })
+export async function addTicketType({
+  name,
+  nameTamil = '',
+  category,
+  categoryTamil = '',
+  kind = 'puja', // 'puja' | 'donation'
+  price,
+  order = 0
+}) {
+  return addDoc(ticketTypesCol, {
+    name,
+    nameTamil,
+    category,
+    categoryTamil,
+    kind,
+    price,
+    order,
+    active: true
+  })
 }
 
 export async function updateTicketType(id, updates) {
@@ -59,7 +76,7 @@ function dateKeyFor(d) {
   return `${yyyy}${mm}${dd}`
 }
 
-export async function recordSale({ ticketTypeId, ticketName, price, operator }) {
+export async function recordSale({ ticketTypeId, ticketName, ticketNameTamil, price, operator, donorName }) {
   const now = new Date()
   const dateKey = dateKeyFor(now)
   const receiptNo = await getNextReceiptNo(dateKey)
@@ -67,8 +84,10 @@ export async function recordSale({ ticketTypeId, ticketName, price, operator }) 
   const docRef = await addDoc(salesCol, {
     ticketTypeId,
     ticketName,
+    ticketNameTamil: ticketNameTamil || '',
     price,
     operator: operator || 'Unknown',
+    donorName: donorName || '',
     receiptNo,
     dateKey,
     printed: false,

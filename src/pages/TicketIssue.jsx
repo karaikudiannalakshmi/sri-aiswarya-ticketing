@@ -8,13 +8,15 @@ import {
   getTransport,
   printBytes
 } from '../lib/printer'
-import { buildTicketReceipt } from '../lib/escpos'
+import { buildBilingualTicketReceipt } from '../lib/receiptImage'
 import TicketButton from '../components/TicketButton'
 
 export default function TicketIssue() {
   const [tickets, setTickets] = useState([])
   const [selected, setSelected] = useState(null)
   const [operator, setOperator] = useState(localStorage.getItem('temple_operator') || '')
+  const [donorName, setDonorName] = useState('')
+  const [donationAmount, setDonationAmount] = useState('')
   const [printerName, setPrinterName] = useState(null)
   const [transports] = useState(availableTransports())
   const [busy, setBusy] = useState(false)
@@ -29,6 +31,12 @@ export default function TicketIssue() {
   useEffect(() => {
     localStorage.setItem('temple_operator', operator)
   }, [operator])
+
+  function handleSelectTicket(ticket) {
+    setSelected(ticket)
+    setDonorName('')
+    setDonationAmount(ticket.kind === 'donation' ? String(ticket.price) : '')
+  }
 
   async function handleConnectPrinter(transport) {
     try {
@@ -45,6 +53,8 @@ export default function TicketIssue() {
     setPrinterName(null)
   }
 
+  const isDonation = selected?.kind === 'donation'
+
   async function handleIssue() {
     if (!selected) {
       setMessage('Select a ticket first.')
@@ -54,16 +64,27 @@ export default function TicketIssue() {
       setMessage('Enter operator name first.')
       return
     }
+    if (isDonation && !donorName.trim()) {
+      setMessage("Enter the donor's name first.")
+      return
+    }
+    const finalAmount = isDonation ? Number(donationAmount) : selected.price
+    if (isDonation && (!finalAmount || finalAmount <= 0)) {
+      setMessage('Enter a valid donation amount.')
+      return
+    }
     setBusy(true)
     setMessage('')
     try {
       const sale = await recordSale({
         ticketTypeId: selected.id,
         ticketName: selected.name,
-        price: selected.price,
-        operator: operator.trim()
+        ticketNameTamil: selected.nameTamil,
+        price: finalAmount,
+        operator: operator.trim(),
+        donorName: isDonation ? donorName.trim() : ''
       })
-      setLastSale({ ...sale, ticket: selected })
+      setLastSale({ ...sale, ticket: { ...selected, price: finalAmount }, donorName: donorName.trim() })
       setMessage(`Issued: ${sale.receiptNo}`)
     } catch (e) {
       setMessage('Error issuing ticket: ' + e.message)
@@ -83,13 +104,15 @@ export default function TicketIssue() {
       if (!isConnected()) {
         throw new Error('Connect a printer first (Bluetooth or USB, above).')
       }
-      const bytes = buildTicketReceipt({
+      const bytes = await buildBilingualTicketReceipt({
         ticketName: lastSale.ticket.name,
+        ticketNameTamil: lastSale.ticket.nameTamil,
         price: lastSale.ticket.price,
         receiptNo: lastSale.receiptNo,
         dateStr: lastSale.createdAt.toLocaleDateString(),
         timeStr: lastSale.createdAt.toLocaleTimeString(),
-        operator
+        operator,
+        donorName: lastSale.donorName
       })
       await printBytes(bytes)
       await markSalePrinted(lastSale.id)
@@ -104,7 +127,7 @@ export default function TicketIssue() {
   const categories = [...new Set(tickets.map((t) => t.category))]
 
   return (
-    <div className="min-h-screen bg-temple-cream pb-32">
+    <div className="min-h-screen bg-temple-cream pb-40">
       <div className="p-4 md:p-6 pb-4 border-b border-black/5">
         <h1 className="font-bold text-xl text-temple-maroon">Issue Ticket</h1>
         <p className="text-sm text-gray-500">Select a ticket, issue it, then print the receipt.</p>
@@ -166,12 +189,33 @@ export default function TicketIssue() {
                     key={t.id}
                     ticket={t}
                     selected={selected?.id === t.id}
-                    onClick={setSelected}
+                    onClick={handleSelectTicket}
                   />
                 ))}
             </div>
           </div>
         ))}
+
+        {isDonation && (
+          <div className="bg-white rounded-xl p-4 border-2 border-temple-gold space-y-3">
+            <p className="text-sm font-semibold text-temple-maroon">Donation details</p>
+            <input
+              value={donorName}
+              onChange={(e) => setDonorName(e.target.value)}
+              placeholder="Donor's name"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">Amount</span>
+              <input
+                type="number"
+                value={donationAmount}
+                onChange={(e) => setDonationAmount(e.target.value)}
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
+              />
+            </div>
+          </div>
+        )}
 
         {message && (
           <div className="text-sm bg-white border border-gray-200 rounded-lg p-3 text-gray-700">

@@ -5,8 +5,17 @@ import {
   updateTicketType,
   deleteTicketType
 } from '../lib/tickets'
+import { formatCurrency, CURRENCY } from '../lib/currency'
 
-const emptyForm = { name: '', category: '', price: '', order: 0 }
+const emptyForm = {
+  name: '',
+  nameTamil: '',
+  category: '',
+  categoryTamil: '',
+  kind: 'puja',
+  price: '',
+  order: 0
+}
 
 export default function AdminTicketTypes() {
   const [tickets, setTickets] = useState([])
@@ -31,7 +40,10 @@ export default function AdminTicketTypes() {
     }
     const payload = {
       name: form.name.trim(),
+      nameTamil: form.nameTamil.trim(),
       category: form.category.trim(),
+      categoryTamil: form.categoryTamil.trim(),
+      kind: form.kind,
       price: Number(form.price),
       order: Number(form.order) || 0
     }
@@ -48,7 +60,15 @@ export default function AdminTicketTypes() {
   }
 
   function startEdit(t) {
-    setForm({ name: t.name, category: t.category, price: t.price, order: t.order || 0 })
+    setForm({
+      name: t.name,
+      nameTamil: t.nameTamil || '',
+      category: t.category,
+      categoryTamil: t.categoryTamil || '',
+      kind: t.kind || 'puja',
+      price: t.price,
+      order: t.order || 0
+    })
     setEditingId(t.id)
   }
 
@@ -65,22 +85,68 @@ export default function AdminTicketTypes() {
         <p className="text-gray-500 mb-6">Add, edit, or remove tickets, pujas, and donation types.</p>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow p-6 mb-8 space-y-3">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, kind: 'puja' })}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium border-2 ${
+                form.kind === 'puja'
+                  ? 'bg-temple-maroon text-white border-temple-maroon'
+                  : 'bg-white text-gray-500 border-gray-200'
+              }`}
+            >
+              Puja / Ticket
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, kind: 'donation' })}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium border-2 ${
+                form.kind === 'donation'
+                  ? 'bg-temple-maroon text-white border-temple-maroon'
+                  : 'bg-white text-gray-500 border-gray-200'
+              }`}
+            >
+              Donation
+            </button>
+          </div>
+          <p className="text-xs text-gray-400">
+            {form.kind === 'puja'
+              ? 'Fixed-price ticket. Operator just selects it and issues - no extra details needed.'
+              : "Operator will be asked for the donor's name when issuing this, and can enter the actual amount given (the price below is just a suggested default)."}
+          </p>
+
           <div className="grid grid-cols-2 gap-3">
             <input
-              placeholder="Ticket name (e.g. Agal Vilaku)"
+              placeholder={
+                form.kind === 'donation'
+                  ? 'Donation name - English (e.g. General Donation)'
+                  : 'Ticket name - English (e.g. Agal Vilaku)'
+              }
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="border rounded-lg px-3 py-2"
             />
             <input
-              placeholder="Category (e.g. Puja, Donation)"
+              placeholder="Name - Tamil (e.g. அகல் விளக்கு)"
+              value={form.nameTamil}
+              onChange={(e) => setForm({ ...form, nameTamil: e.target.value })}
+              className="border rounded-lg px-3 py-2"
+            />
+            <input
+              placeholder="Category - English (e.g. Puja, Annadhanam)"
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
               className="border rounded-lg px-3 py-2"
             />
             <input
+              placeholder="Category - Tamil (e.g. பூஜை, அன்னதானம்)"
+              value={form.categoryTamil}
+              onChange={(e) => setForm({ ...form, categoryTamil: e.target.value })}
+              className="border rounded-lg px-3 py-2"
+            />
+            <input
               type="number"
-              placeholder="Price (Rs.)"
+              placeholder={form.kind === 'donation' ? `Suggested amount (${CURRENCY})` : `Price (${CURRENCY})`}
               value={form.price}
               onChange={(e) => setForm({ ...form, price: e.target.value })}
               className="border rounded-lg px-3 py-2"
@@ -120,9 +186,18 @@ export default function AdminTicketTypes() {
           {tickets.map((t) => (
             <div key={t.id} className="flex items-center justify-between p-4">
               <div>
-                <p className="font-medium">{t.name}</p>
+                <p className="font-medium flex items-center gap-2">
+                  {t.name}
+                  {t.nameTamil && <span className="text-gray-400 font-normal"> · {t.nameTamil}</span>}
+                  {t.kind === 'donation' && (
+                    <span className="text-[10px] uppercase tracking-wide bg-temple-gold/20 text-temple-maroon px-2 py-0.5 rounded-full">
+                      Donation
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs text-gray-400">
-                  {t.category} · Rs. {Number(t.price).toFixed(2)}
+                  {t.category} · {formatCurrency(t.price)}
+                  {t.kind === 'donation' ? ' (suggested)' : ''}
                 </p>
               </div>
               <div className="flex gap-3 text-sm">

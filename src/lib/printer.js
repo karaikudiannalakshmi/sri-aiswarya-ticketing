@@ -7,6 +7,7 @@ import * as bt from './bluetoothPrinter'
 import * as serial from './serialPrinter'
 
 const TRANSPORT_KEY = 'temple_printer_transport'
+const PAPER_WIDTH_KEY = 'temple_printer_paper_width'
 
 export function getTransport() {
   return localStorage.getItem(TRANSPORT_KEY) || null // 'bluetooth' | 'usb' | null
@@ -14,6 +15,16 @@ export function getTransport() {
 
 export function setTransport(transport) {
   localStorage.setItem(TRANSPORT_KEY, transport)
+}
+
+// 384 dots = common 58mm thermal paper, 576 dots = 80mm. Defaults to 58mm
+// since that's the cheaper/more common size for compact receipt printers.
+export function getPaperWidthDots() {
+  return Number(localStorage.getItem(PAPER_WIDTH_KEY)) || 384
+}
+
+export function setPaperWidthDots(widthDots) {
+  localStorage.setItem(PAPER_WIDTH_KEY, String(widthDots))
 }
 
 export function availableTransports() {
