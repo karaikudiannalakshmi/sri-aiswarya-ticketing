@@ -93,17 +93,32 @@ export default function TicketIssue() {
   // Live suggestions as the operator types - matches on serial number
   // (from the start, since that's how a printed tariff sheet works) or
   // anywhere in the English/Tamil name (for when the number is forgotten).
+  // Sorted so an exact serial number match always comes first, then
+  // other serial-prefix matches in numeric order, then name matches -
+  // otherwise typing "1" would show 1, 10, 11, 12...121 in whatever
+  // arbitrary order they happen to be in, with "1" itself easy to miss.
   const quickMatches = (() => {
     const q = quickCode.trim().toLowerCase()
     if (!q) return []
-    return tickets
-      .filter(
-        (t) =>
-          (t.serialNo || '').toLowerCase().startsWith(q) ||
-          (t.name || '').toLowerCase().includes(q) ||
-          (t.nameTamil || '').includes(quickCode.trim())
-      )
-      .slice(0, 8)
+    const matches = tickets.filter(
+      (t) =>
+        (t.serialNo || '').toLowerCase().startsWith(q) ||
+        (t.name || '').toLowerCase().includes(q) ||
+        (t.nameTamil || '').includes(quickCode.trim())
+    )
+    matches.sort((a, b) => {
+      const aExact = (a.serialNo || '').toLowerCase() === q
+      const bExact = (b.serialNo || '').toLowerCase() === q
+      if (aExact !== bExact) return aExact ? -1 : 1
+      const aSerial = (a.serialNo || '').toLowerCase().startsWith(q)
+      const bSerial = (b.serialNo || '').toLowerCase().startsWith(q)
+      if (aSerial !== bSerial) return aSerial ? -1 : 1
+      const aNum = Number(a.serialNo)
+      const bNum = Number(b.serialNo)
+      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum
+      return (a.serialNo || '').localeCompare(b.serialNo || '')
+    })
+    return matches.slice(0, 8)
   })()
 
   async function handleConnectPrinter(transport) {

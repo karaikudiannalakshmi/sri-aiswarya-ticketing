@@ -105,7 +105,12 @@ export async function bulkUpsertTicketTypes(rows, { replaceAll = false } = {}) {
         categoryTamil: String(row.categoryTamil || '').trim(),
         kind: row.kind === 'donation' ? 'donation' : 'puja',
         price: Number(row.price) || 0,
-        order: Number(row.order) || 0,
+        // Fall back to the numeric Serial No for sort order when no
+        // explicit Order column is given - otherwise every imported row
+        // ties at 0 and the browse list falls back to Firestore's
+        // internal (effectively random) ordering instead of matching the
+        // tariff sheet's own numbering.
+        order: Number(row.order) || Number(serialNo) || 0,
         active: true
       }
       const serialMatch = serialNo ? bySerial.get(serialNo) : null
