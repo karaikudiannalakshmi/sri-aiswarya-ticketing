@@ -13,6 +13,7 @@
 
 const DEFAULT_WIDTH_DOTS = 384 // 384 = common 58mm printer, 576 = 80mm printer
 const FONT_STACK = '"Noto Sans Tamil", sans-serif'
+const DEFAULT_TEMPLE_ADDRESS = 'கம்பன் கோட்டம், இல. 11, இராமகிருஷ்ண தோட்டம், கொழும்பு-06'
 
 async function ensureFontLoaded() {
   // Force the browser to actually fetch/parse the bundled Tamil font
@@ -95,6 +96,7 @@ async function renderReceiptCanvas(fields, widthDots) {
 
   const templeBold = `bold 26px ${FONT_STACK}`
   const templeTamil = `bold 24px ${FONT_STACK}`
+  const templeAddress = `18px ${FONT_STACK}`
   const ticketBold = `bold 30px ${FONT_STACK}`
   const ticketTamil = `bold 27px ${FONT_STACK}`
   const sectionHeading = `bold 24px ${FONT_STACK}`
@@ -104,6 +106,7 @@ async function renderReceiptCanvas(fields, widthDots) {
 
   center(fields.templeName, templeBold, 32)
   center(fields.templeNameTamil, templeTamil, 30)
+  center(fields.templeAddress || DEFAULT_TEMPLE_ADDRESS, templeAddress, 24)
   divider()
 
   if (fields.kind === 'donation') {
@@ -215,6 +218,7 @@ function canvasToRasterBytes(canvas, { threshold = 200 } = {}) {
 export async function buildBilingualTicketReceipt({
   templeName = 'Sri Aishwarya Lakshmi Temple, Colombo',
   templeNameTamil = 'ஸ்ரீ ஐசுவர்ய லட்சுமி திருக்கோயில், கொழும்பு',
+  templeAddress = DEFAULT_TEMPLE_ADDRESS,
   ticketName,
   ticketNameTamil,
   kind = 'puja',
@@ -233,6 +237,7 @@ export async function buildBilingualTicketReceipt({
     {
       templeName,
       templeNameTamil,
+      templeAddress,
       ticketName,
       ticketNameTamil,
       kind,
