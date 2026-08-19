@@ -158,6 +158,36 @@ prices) is safe - rows are matched by Serial No, so an existing item gets
 updated in place instead of creating a duplicate, and new Serial Nos just
 get added.
 
+### Merging older, unnumbered ticket types into a renumbered list
+
+If some ticket types were created before Serial No existed (e.g. added
+one at a time through the form early on), a plain re-upload would create
+duplicates for them, since there's no serial number yet to match against.
+To fold them into a single renumbered catalog instead:
+
+1. On **Manage Ticket Types**, click **Export Current List** - downloads
+   everything currently in the app, in the same format as the import
+   template.
+2. Combine that with whatever else needs merging (e.g. a full tariff
+   sheet) into one file, giving every row - old and new - a Serial No in
+   one consistent sequence.
+3. Upload the combined file.
+
+For rows with a Serial No that doesn't match anything existing, the
+import falls back to matching by exact name against ticket types that
+don't have a serial number yet - so an old item gets renumbered in place
+rather than duplicated. The import result message tells you how many
+were handled this way.
+
+**"Replace entire list" checkbox** - check this before uploading if the
+file you're uploading should become the *whole* catalog: anything
+currently in the app that ISN'T matched by a row in the file gets deleted
+after the import. Matched items still update their existing entry rather
+than being recreated (so their receipt numbering stays intact) - only
+genuinely-removed items are deleted. There's a confirmation prompt before
+this runs, since deletions can't be undone. Leave it unchecked for a
+normal additive import.
+
 **Important:** a newly-imported ticket type still needs its receipt
 numbering set up on the **Receipt Numbering** page before an Operator can
 issue it (see "Receipt numbering" above) - the import only creates the

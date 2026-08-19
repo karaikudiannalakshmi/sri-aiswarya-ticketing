@@ -27,6 +27,7 @@ export default function AdminTicketTypes() {
   const [message, setMessage] = useState('')
   const [importBusy, setImportBusy] = useState(false)
   const [importMessage, setImportMessage] = useState('')
+  const [replaceAll, setReplaceAll] = useState(false)
   const fileInputRef = useRef(null)
 
   async function load() {
@@ -89,6 +90,18 @@ export default function AdminTicketTypes() {
   async function handleFileImport(e) {
     const file = e.target.files?.[0]
     if (!file) return
+
+    if (replaceAll) {
+      const ok = confirm(
+        `"Replace entire list" is checked. Any ticket type currently in the app that is NOT ` +
+          `in this file will be deleted after the import. This can't be undone. Continue?`
+      )
+      if (!ok) {
+        if (fileInputRef.current) fileInputRef.current.value = ''
+        return
+      }
+    }
+
     setImportBusy(true)
     setImportMessage('')
     try {
@@ -116,9 +129,11 @@ export default function AdminTicketTypes() {
         return
       }
 
-      const result = await bulkUpsertTicketTypes(mapped)
+      const result = await bulkUpsertTicketTypes(mapped, { replaceAll })
       setImportMessage(
         `Done: ${result.created} added, ${result.updated} updated` +
+          (result.renumbered ? ` (${result.renumbered} matched by name and given a new serial number)` : '') +
+          (result.removed ? `, ${result.removed} removed (not in this file)` : '') +
           (result.skipped ? `, ${result.skipped} skipped (missing name)` : '') +
           '.'
       )
@@ -157,6 +172,43 @@ export default function AdminTicketTypes() {
     XLSX.writeFile(wb, 'ticket-types-import-template.xlsx')
   }
 
+  // Exports the current live catalog in the exact same column format as
+  // the import template, so it can be edited (e.g. merged with another
+  // list, renumbered) and re-uploaded through the same Import flow.
+  function exportCurrentTicketTypes() {
+    const headers = [
+      'Serial No',
+      'Name (English)',
+      'Name (Tamil)',
+      'Category (English)',
+      'Category (Tamil)',
+      'Kind (puja or donation)',
+      'Price (LKR)'
+    ]
+    const rows = tickets.map((t) => [
+      t.serialNo || '',
+      t.name || '',
+      t.nameTamil || '',
+      t.category || '',
+      t.categoryTamil || '',
+      t.kind === 'donation' ? 'donation' : 'puja',
+      t.price || 0
+    ])
+    const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    sheet['!cols'] = [
+      { wch: 12 },
+      { wch: 26 },
+      { wch: 26 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 20 },
+      { wch: 14 }
+    ]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, sheet, 'Ticket Types')
+    XLSX.writeFile(wb, `current-ticket-types-${new Date().toISOString().slice(0, 10)}.xlsx`)
+  }
+
   return (
     <div className="min-h-screen bg-temple-cream p-4 md:p-6">
       <div className="max-w-3xl mx-auto">
@@ -177,6 +229,13 @@ export default function AdminTicketTypes() {
             >
               Download Template
             </button>
+            <button
+              onClick={exportCurrentTicketTypes}
+              disabled={tickets.length === 0}
+              className="text-sm text-temple-maroon font-medium border border-temple-maroon rounded-lg px-4 py-2 disabled:opacity-40"
+            >
+              Export Current List ({tickets.length})
+            </button>
             <label className="text-sm bg-temple-maroon text-white rounded-lg px-4 py-2 font-medium cursor-pointer">
               {importBusy ? 'Importing...' : 'Upload Filled Template'}
               <input
@@ -189,6 +248,14 @@ export default function AdminTicketTypes() {
               />
             </label>
           </div>
+          <label className="flex items-center gap-2 mt-3 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={replaceAll}
+              onChange={(e) => setReplaceAll(e.target.checked)}
+            />
+            Replace entire list - delete any ticket type not in the uploaded file
+          </label>
           {importMessage && <p className="text-sm text-gray-600 mt-3">{importMessage}</p>}
         </div>
 

@@ -23,6 +23,7 @@ export default function TicketIssue() {
   const [donorAddress, setDonorAddress] = useState('')
   const [donationAmount, setDonationAmount] = useState('')
   const [quickCode, setQuickCode] = useState('')
+  const [showBrowseAll, setShowBrowseAll] = useState(false)
   const [printerName, setPrinterName] = useState(null)
   const [transports] = useState(availableTransports())
   const [busy, setBusy] = useState(false)
@@ -88,6 +89,22 @@ export default function TicketIssue() {
       setMessage(`No ticket found with serial number "${quickCode.trim()}".`)
     }
   }
+
+  // Live suggestions as the operator types - matches on serial number
+  // (from the start, since that's how a printed tariff sheet works) or
+  // anywhere in the English/Tamil name (for when the number is forgotten).
+  const quickMatches = (() => {
+    const q = quickCode.trim().toLowerCase()
+    if (!q) return []
+    return tickets
+      .filter(
+        (t) =>
+          (t.serialNo || '').toLowerCase().startsWith(q) ||
+          (t.name || '').toLowerCase().includes(q) ||
+          (t.nameTamil || '').includes(quickCode.trim())
+      )
+      .slice(0, 8)
+  })()
 
   async function handleConnectPrinter(transport) {
     try {
@@ -248,20 +265,49 @@ export default function TicketIssue() {
           </p>
         )}
 
-        <form onSubmit={handleQuickCodeSubmit} className="flex gap-2">
-          <input
-            value={quickCode}
-            onChange={(e) => setQuickCode(e.target.value)}
-            placeholder="Enter serial no. (e.g. A-101) and press Enter"
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-white"
-          />
-          <button
-            type="submit"
-            className="bg-temple-maroon text-white px-4 py-2 rounded-lg text-sm font-medium shrink-0"
-          >
-            Find
-          </button>
+        <form onSubmit={handleQuickCodeSubmit} className="relative">
+          <div className="flex gap-2">
+            <input
+              value={quickCode}
+              onChange={(e) => setQuickCode(e.target.value)}
+              placeholder="Enter serial no. or name (e.g. A-101)"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-white"
+              autoComplete="off"
+            />
+            <button
+              type="submit"
+              className="bg-temple-maroon text-white px-4 py-2 rounded-lg text-sm font-medium shrink-0"
+            >
+              Find
+            </button>
+          </div>
+          {quickMatches.length > 0 && (
+            <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow divide-y overflow-hidden">
+              {quickMatches.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => handleSelectTicket(t)}
+                  className="w-full text-left px-3 py-2 flex items-center justify-between gap-3 active:bg-temple-cream"
+                >
+                  <span className="text-sm">
+                    {t.serialNo && (
+                      <span className="font-mono text-gray-400 mr-2">#{t.serialNo}</span>
+                    )}
+                    <span className="font-medium">{t.nameTamil || t.name}</span>
+                    {t.nameTamil && (
+                      <span className="text-gray-400"> · {t.name}</span>
+                    )}
+                  </span>
+                  <span className="text-sm font-semibold text-temple-maroon shrink-0">
+                    {formatCurrency(t.price)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </form>
+
         {selected && (
           <div className="bg-temple-maroon/5 border border-temple-maroon/20 rounded-lg px-3 py-2 text-sm">
             Selected:{' '}
@@ -275,24 +321,6 @@ export default function TicketIssue() {
             <span className="font-semibold">{formatCurrency(selected.price)}</span>
           </div>
         )}
-
-        {categories.map((cat) => (
-          <div key={cat}>
-            <h2 className="text-sm font-semibold text-gray-500 uppercase mb-2">{cat}</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {tickets
-                .filter((t) => t.category === cat)
-                .map((t) => (
-                  <TicketButton
-                    key={t.id}
-                    ticket={t}
-                    selected={selected?.id === t.id}
-                    onClick={handleSelectTicket}
-                  />
-                ))}
-            </div>
-          </div>
-        ))}
 
         {selected && (
           <div
@@ -365,6 +393,33 @@ export default function TicketIssue() {
             )}
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={() => setShowBrowseAll((v) => !v)}
+          className="text-sm text-temple-maroon font-medium underline"
+        >
+          {showBrowseAll ? 'Hide full list' : `Browse all tickets (${tickets.length})`}
+        </button>
+
+        {showBrowseAll &&
+          categories.map((cat) => (
+            <div key={cat}>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase mb-2">{cat}</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {tickets
+                  .filter((t) => t.category === cat)
+                  .map((t) => (
+                    <TicketButton
+                      key={t.id}
+                      ticket={t}
+                      selected={selected?.id === t.id}
+                      onClick={handleSelectTicket}
+                    />
+                  ))}
+              </div>
+            </div>
+          ))}
 
         {message && (
           <div className="text-sm bg-white border border-gray-200 rounded-lg p-3 text-gray-700">

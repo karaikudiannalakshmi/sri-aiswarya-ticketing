@@ -60,15 +60,31 @@ export async function deleteTicketType(id) {
 }
 
 // Bulk create/update from an imported spreadsheet. Rows are matched to
-// existing ticket types by serialNo - if a serial number already exists,
-// that ticket type is updated in place (price corrections, renames);
-// otherwise a new ticket type is created. Firestore batches cap at 500
-// writes, so large imports are split into chunks automatically.
-export async function bulkUpsertTicketTypes(rows) {
+// existing ticket types by serialNo first - if a serial number already
+// exists, that ticket type is updated in place (price corrections,
+// renames). If no serialNo match is found, it falls back to matching by
+// exact name among ticket types that don't have a serial number yet -
+// this is what lets an older, unnumbered ticket type get folded into a
+// renumbered list in place, instead of becoming a duplicate alongside its
+// old self. Otherwise a brand new ticket type is created. Firestore
+// batches cap at 500 writes, so large imports are split into chunks.
+//
+// With replaceAll: true, anything currently in the catalog that ISN'T
+// matched by a row in this import gets deleted afterwards - useful for
+// "this file is now the whole list." Matched items still update their
+// existing document rather than being recreated, which matters because
+// each ticket type's receipt numbering series is tied to its document ID
+// (counters/{ticketTypeId}) - only genuinely-removed items are deleted,
+// never ones this import touched.
+export async function bulkUpsertTicketTypes(rows, { replaceAll = false } = {}) {
   const existing = await fetchTicketTypes()
   const bySerial = new Map(existing.filter((t) => t.serialNo).map((t) => [t.serialNo, t]))
+  const byNameNoSerial = new Map(
+    existing.filter((t) => !t.serialNo).map((t) => [t.name.trim().toLowerCase(), t])
+  )
+  const touchedIds = new Set()
 
-  const results = { created: 0, updated: 0, skipped: 0 }
+  const results = { created: 0, updated: 0, skipped: 0, renumbered: 0, removed: 0 }
   const chunks = []
   for (let i = 0; i < rows.length; i += 400) chunks.push(rows.slice(i, i + 400))
 
@@ -92,19 +108,43 @@ export async function bulkUpsertTicketTypes(rows) {
         order: Number(row.order) || 0,
         active: true
       }
-      const match = serialNo ? bySerial.get(serialNo) : null
+      const serialMatch = serialNo ? bySerial.get(serialNo) : null
+      const nameMatch = !serialMatch ? byNameNoSerial.get(name.toLowerCase()) : null
+      const match = serialMatch || nameMatch
       if (match) {
+        if (nameMatch && serialNo) {
+          results.renumbered++
+          bySerial.set(serialNo, match) // so a later row can't double-match this doc
+          byNameNoSerial.delete(name.toLowerCase())
+        }
         batch.set(doc(db, 'ticketTypes', match.id), payload, { merge: true })
         results.updated++
+        touchedIds.add(match.id)
       } else {
         const newRef = doc(ticketTypesCol)
         batch.set(newRef, payload)
         results.created++
+        touchedIds.add(newRef.id)
         if (serialNo) bySerial.set(serialNo, { id: newRef.id })
       }
     }
     await batch.commit()
   }
+
+  if (replaceAll) {
+    const toRemove = existing.filter((t) => !touchedIds.has(t.id))
+    const removeChunks = []
+    for (let i = 0; i < toRemove.length; i += 400) removeChunks.push(toRemove.slice(i, i + 400))
+    for (const chunk of removeChunks) {
+      const batch = writeBatch(db)
+      for (const t of chunk) {
+        batch.delete(doc(db, 'ticketTypes', t.id))
+      }
+      await batch.commit()
+    }
+    results.removed = toRemove.length
+  }
+
   return results
 }
 
