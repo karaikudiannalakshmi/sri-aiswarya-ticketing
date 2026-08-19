@@ -21,6 +21,30 @@ donations, and receipts.
   correct the continuous receipt number series (see "Receipt numbering"
   below).
 
+## Installing as a mobile app (not just a browser tab)
+
+This app is a Progressive Web App (PWA) - once deployed, it can be
+installed on a phone's home screen like a real app: its own icon, opens
+full-screen with no browser address bar, and shows an "SL" temple icon.
+This doesn't require the Google Play Store or Apple App Store - it
+installs straight from the browser.
+
+**On Android (Chrome):**
+1. Open the site
+2. Tap the **⋮** menu → **Install app** (or **Add to Home screen**)
+3. Confirm - an app icon appears on the home screen
+
+**On iPhone/iPad (Safari):**
+1. Open the site in Safari (must be Safari, not Chrome, for this to work
+   on iOS)
+2. Tap the **Share** icon → **Add to Home Screen**
+3. Confirm
+
+Once installed, opening the app icon behaves like a native app (own
+window, no browser chrome). It still needs an internet connection to
+issue tickets and load the dashboard - only the app's own interface is
+cached for fast/offline opening, not the live ticket/sales data.
+
 ## Two logins: Admin and Operator
 
 - **Admin** - full access: Dashboard, Manage Ticket Types, Receipt
