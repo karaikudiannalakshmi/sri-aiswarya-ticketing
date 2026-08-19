@@ -11,6 +11,7 @@ import {
   where,
   orderBy,
   runTransaction,
+  writeBatch,
   Timestamp
 } from 'firebase/firestore'
 import { db } from '../firebase'
@@ -28,6 +29,7 @@ export async function fetchTicketTypes() {
 }
 
 export async function addTicketType({
+  serialNo = '',
   name,
   nameTamil = '',
   category,
@@ -37,6 +39,7 @@ export async function addTicketType({
   order = 0
 }) {
   return addDoc(ticketTypesCol, {
+    serialNo: String(serialNo || ''),
     name,
     nameTamil,
     category,
@@ -56,47 +59,81 @@ export async function deleteTicketType(id) {
   return deleteDoc(doc(db, 'ticketTypes', id))
 }
 
+// Bulk create/update from an imported spreadsheet. Rows are matched to
+// existing ticket types by serialNo - if a serial number already exists,
+// that ticket type is updated in place (price corrections, renames);
+// otherwise a new ticket type is created. Firestore batches cap at 500
+// writes, so large imports are split into chunks automatically.
+export async function bulkUpsertTicketTypes(rows) {
+  const existing = await fetchTicketTypes()
+  const bySerial = new Map(existing.filter((t) => t.serialNo).map((t) => [t.serialNo, t]))
+
+  const results = { created: 0, updated: 0, skipped: 0 }
+  const chunks = []
+  for (let i = 0; i < rows.length; i += 400) chunks.push(rows.slice(i, i + 400))
+
+  for (const chunk of chunks) {
+    const batch = writeBatch(db)
+    for (const row of chunk) {
+      const serialNo = String(row.serialNo || '').trim()
+      const name = String(row.name || '').trim()
+      if (!name) {
+        results.skipped++
+        continue
+      }
+      const payload = {
+        serialNo,
+        name,
+        nameTamil: String(row.nameTamil || '').trim(),
+        category: String(row.category || 'General').trim(),
+        categoryTamil: String(row.categoryTamil || '').trim(),
+        kind: row.kind === 'donation' ? 'donation' : 'puja',
+        price: Number(row.price) || 0,
+        order: Number(row.order) || 0,
+        active: true
+      }
+      const match = serialNo ? bySerial.get(serialNo) : null
+      if (match) {
+        batch.set(doc(db, 'ticketTypes', match.id), payload, { merge: true })
+        results.updated++
+      } else {
+        const newRef = doc(ticketTypesCol)
+        batch.set(newRef, payload)
+        results.created++
+        if (serialNo) bySerial.set(serialNo, { id: newRef.id })
+      }
+    }
+    await batch.commit()
+  }
+  return results
+}
+
 // ---------- Receipt numbering (continuous, for audit trail) ----------
 //
 // Receipt numbers never reset - they run continuously for the life of the
-// temple's records, the same way a pre-printed paper ticket book would.
-// Puja tickets and donations are numbered in two separate series (so a
-// donation receipt book and a ticket book can each be audited on their
-// own), each stored as one counter document:
-//   counters/ticketSeries    -> { prefix, padding, count }
-//   counters/donationSeries  -> { prefix, padding, count }
+// temple's records, the same way a pre-printed paper ticket book runs
+// continuously until it's used up. Every ticket type gets its OWN series
+// (matching how the temple's real paper books work - Archanai, Kappu
+// Nool, Special Puja, and Donations are all numbered independently), keyed
+// by that ticket type's own Firestore document ID:
+//   counters/<ticketType id>  -> { prefix, padding, count }
 // `count` is the last number issued; the next one issued is count + 1.
 
-const SERIES = {
-  puja: 'ticketSeries',
-  donation: 'donationSeries'
+const DEFAULT_SERIES = { prefix: '', padding: 6, count: 0 }
+
+export async function getSeriesSettings(ticketTypeId) {
+  const snap = await getDoc(doc(db, 'counters', ticketTypeId))
+  return snap.exists() ? snap.data() : DEFAULT_SERIES
 }
 
-const DEFAULT_SERIES_SETTINGS = {
-  ticketSeries: { prefix: 'T-', padding: 6, count: 0 },
-  donationSeries: { prefix: 'D-', padding: 6, count: 0 }
-}
-
-export async function getSeriesSettings(seriesId) {
-  const snap = await getDoc(doc(db, 'counters', seriesId))
-  if (snap.exists()) return snap.data()
-  return DEFAULT_SERIES_SETTINGS[seriesId] || { prefix: '', padding: 6, count: 0 }
-}
-
-export async function getAllSeriesSettings() {
-  const [ticketSeries, donationSeries] = await Promise.all([
-    getSeriesSettings('ticketSeries'),
-    getSeriesSettings('donationSeries')
-  ])
-  return { ticketSeries, donationSeries }
-}
-
-// Sets up or corrects a series: nextNumber is the number that should be
-// issued NEXT (e.g. if your existing printed books go up to 5000, set
-// nextNumber to 5001 to continue the same audit trail in this system).
-export async function setSeriesSettings(seriesId, { prefix, padding, nextNumber }) {
+// Sets up or corrects a ticket type's series: nextNumber is the number
+// that should be issued NEXT (e.g. if the paper book for this ticket type
+// is already up to 2216, set nextNumber to 2217 to continue the same
+// audit trail in this system, matching what's printed on the next unused
+// paper stub).
+export async function setSeriesSettings(ticketTypeId, { prefix, padding, nextNumber }) {
   await setDoc(
-    doc(db, 'counters', seriesId),
+    doc(db, 'counters', ticketTypeId),
     { prefix, padding: Number(padding), count: Number(nextNumber) - 1 },
     { merge: true }
   )
@@ -106,11 +143,11 @@ function formatReceiptNo({ prefix, padding, number }) {
   return `${prefix || ''}${String(number).padStart(padding || 1, '0')}`
 }
 
-async function getNextReceiptNo(seriesId) {
-  const counterRef = doc(db, 'counters', seriesId)
+async function getNextReceiptNo(ticketTypeId) {
+  const counterRef = doc(db, 'counters', ticketTypeId)
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(counterRef)
-    const current = snap.exists() ? snap.data() : DEFAULT_SERIES_SETTINGS[seriesId]
+    const current = snap.exists() ? snap.data() : DEFAULT_SERIES
     const nextCount = (current.count || 0) + 1
     tx.set(counterRef, { ...current, count: nextCount }, { merge: true })
     return formatReceiptNo({ prefix: current.prefix, padding: current.padding, number: nextCount })
@@ -131,13 +168,14 @@ export async function recordSale({
   kind = 'puja',
   price,
   operator,
-  donorName,
+  name,
+  nakshatra,
+  phone,
   donorAddress
 }) {
   const now = new Date()
   const dateKey = dateKeyFor(now)
-  const seriesId = SERIES[kind] || SERIES.puja
-  const receiptNo = await getNextReceiptNo(seriesId)
+  const receiptNo = await getNextReceiptNo(ticketTypeId)
 
   const docRef = await addDoc(salesCol, {
     ticketTypeId,
@@ -146,7 +184,9 @@ export async function recordSale({
     kind,
     price,
     operator: operator || 'Unknown',
-    donorName: donorName || '',
+    name: name || '',
+    nakshatra: nakshatra || '',
+    phone: phone || '',
     donorAddress: donorAddress || '',
     receiptNo,
     dateKey,
@@ -154,7 +194,69 @@ export async function recordSale({
     createdAt: Timestamp.fromDate(now)
   })
 
+  // Best-effort: keep the devotee directory up to date so future lookups
+  // by phone number find this person. Never let a directory hiccup block
+  // the actual ticket/receipt, which is the important part.
+  if (phone && phone.trim() && name && name.trim()) {
+    upsertDevotee({ phone, name, nakshatra, address: donorAddress }).catch(() => {})
+  }
+
   return { id: docRef.id, receiptNo, createdAt: now }
+}
+
+// ---------- Devotee directory (phone -> known names) ----------
+//
+// A separate, deliberately minimal collection: just phone/name/nakshatra/
+// address, nothing financial. This is what lets an Operator look someone
+// up by phone number without needing read access to the sales collection
+// (which holds amounts and receipt numbers, and stays Admin-only).
+
+function normalizePhone(phone) {
+  return String(phone || '').replace(/\D/g, '')
+}
+
+export async function upsertDevotee({ phone, name, nakshatra, address }) {
+  const key = normalizePhone(phone)
+  if (!key || !name?.trim()) return
+  const ref = doc(db, 'devotees', key)
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    const existing = snap.exists() ? snap.data().entries || [] : []
+    const trimmedName = name.trim()
+    const idx = existing.findIndex((e) => e.name.toLowerCase() === trimmedName.toLowerCase())
+
+    let entries
+    if (idx >= 0) {
+      entries = [...existing]
+      entries[idx] = {
+        name: trimmedName,
+        nakshatra: nakshatra?.trim() || entries[idx].nakshatra || '',
+        address: address?.trim() || entries[idx].address || ''
+      }
+    } else {
+      entries = [
+        ...existing,
+        { name: trimmedName, nakshatra: nakshatra?.trim() || '', address: address?.trim() || '' }
+      ].slice(0, 20) // cap - a shared family phone shouldn't grow unbounded
+    }
+
+    tx.set(ref, { phone: key, entries }, { merge: true })
+  })
+}
+
+// Returns the list of {name, nakshatra, address} known under this phone
+// number, or [] if none found / on any error (never throws to the caller -
+// a failed lookup should just mean "nothing found", not break the form).
+export async function lookupDevoteesByPhone(phone) {
+  const key = normalizePhone(phone)
+  if (!key) return []
+  try {
+    const snap = await getDoc(doc(db, 'devotees', key))
+    return snap.exists() ? snap.data().entries || [] : []
+  } catch (e) {
+    return []
+  }
 }
 
 export async function markSalePrinted(saleId) {

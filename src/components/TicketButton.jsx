@@ -12,7 +12,10 @@ export default function TicketButton({ ticket, selected, onClick }) {
       }`}
     >
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs uppercase tracking-wide opacity-70">{ticket.category}</span>
+        <span className="text-xs uppercase tracking-wide opacity-70">
+          {ticket.serialNo && <span className="font-mono mr-1">#{ticket.serialNo}</span>}
+          {ticket.category}
+        </span>
         {isDonation && (
           <span
             className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full ${
@@ -23,10 +26,12 @@ export default function TicketButton({ ticket, selected, onClick }) {
           </span>
         )}
       </div>
-      <div className="font-semibold text-base leading-tight">{ticket.name}</div>
+      <div className="font-semibold text-base leading-tight">
+        {ticket.nameTamil || ticket.name}
+      </div>
       {ticket.nameTamil && (
         <div className={`text-sm leading-tight mb-2 ${selected ? 'text-white/85' : 'text-gray-500'}`}>
-          {ticket.nameTamil}
+          {ticket.name}
         </div>
       )}
       <div className={`text-lg font-bold mt-2 ${selected ? 'text-temple-gold' : 'text-temple-maroon'}`}>

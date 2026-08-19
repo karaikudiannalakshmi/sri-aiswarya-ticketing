@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import * as XLSX from 'xlsx'
 import {
   fetchTicketTypes,
   addTicketType,
   updateTicketType,
-  deleteTicketType
+  deleteTicketType,
+  bulkUpsertTicketTypes
 } from '../lib/tickets'
 import { formatCurrency, CURRENCY } from '../lib/currency'
 
 const emptyForm = {
+  serialNo: '',
   name: '',
   nameTamil: '',
   category: '',
@@ -22,6 +25,9 @@ export default function AdminTicketTypes() {
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
   const [message, setMessage] = useState('')
+  const [importBusy, setImportBusy] = useState(false)
+  const [importMessage, setImportMessage] = useState('')
+  const fileInputRef = useRef(null)
 
   async function load() {
     const data = await fetchTicketTypes()
@@ -39,6 +45,7 @@ export default function AdminTicketTypes() {
       return
     }
     const payload = {
+      serialNo: form.serialNo.trim(),
       name: form.name.trim(),
       nameTamil: form.nameTamil.trim(),
       category: form.category.trim(),
@@ -61,6 +68,7 @@ export default function AdminTicketTypes() {
 
   function startEdit(t) {
     setForm({
+      serialNo: t.serialNo || '',
       name: t.name,
       nameTamil: t.nameTamil || '',
       category: t.category,
@@ -78,13 +86,114 @@ export default function AdminTicketTypes() {
     load()
   }
 
+  async function handleFileImport(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportBusy(true)
+    setImportMessage('')
+    try {
+      const buf = await file.arrayBuffer()
+      const wb = XLSX.read(buf)
+      const sheet = wb.Sheets[wb.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' })
+
+      const mapped = rows
+        .map((r) => ({
+          serialNo: r['Serial No'],
+          name: r['Name (English)'],
+          nameTamil: r['Name (Tamil)'],
+          category: r['Category (English)'],
+          categoryTamil: r['Category (Tamil)'],
+          kind: String(r['Kind (puja or donation)'] || '').toLowerCase().includes('donation')
+            ? 'donation'
+            : 'puja',
+          price: r['Price (LKR)']
+        }))
+        .filter((r) => r.name && String(r.name).trim())
+
+      if (mapped.length === 0) {
+        setImportMessage('No usable rows found - check the file matches the template headers.')
+        return
+      }
+
+      const result = await bulkUpsertTicketTypes(mapped)
+      setImportMessage(
+        `Done: ${result.created} added, ${result.updated} updated` +
+          (result.skipped ? `, ${result.skipped} skipped (missing name)` : '') +
+          '.'
+      )
+      load()
+    } catch (err) {
+      setImportMessage('Import failed: ' + err.message)
+    } finally {
+      setImportBusy(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  function downloadTemplate() {
+    const wb = XLSX.utils.book_new()
+    const headers = [
+      'Serial No',
+      'Name (English)',
+      'Name (Tamil)',
+      'Category (English)',
+      'Category (Tamil)',
+      'Kind (puja or donation)',
+      'Price (LKR)'
+    ]
+    const example = ['A-101', 'Special Archanai', 'விசேட அர்ச்சனை', 'Puja', 'பூஜை', 'puja', 350]
+    const sheet = XLSX.utils.aoa_to_sheet([headers, example])
+    sheet['!cols'] = [
+      { wch: 12 },
+      { wch: 26 },
+      { wch: 26 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 20 },
+      { wch: 14 }
+    ]
+    XLSX.utils.book_append_sheet(wb, sheet, 'Ticket Types')
+    XLSX.writeFile(wb, 'ticket-types-import-template.xlsx')
+  }
+
   return (
     <div className="min-h-screen bg-temple-cream p-4 md:p-6">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold text-temple-maroon mb-1">Manage Ticket Types</h1>
         <p className="text-gray-500 mb-6">Add, edit, or remove tickets, pujas, and donation types.</p>
 
+        <div className="bg-white rounded-2xl shadow p-6 mb-8">
+          <h2 className="font-semibold text-gray-700 mb-1">Import from Excel</h2>
+          <p className="text-xs text-gray-400 mb-4">
+            For a large price list (e.g. your full tariff sheet), fill in the template and
+            upload it here instead of adding items one by one. Re-uploading with the same Serial
+            No updates that item instead of duplicating it.
+          </p>
+          <div className="flex flex-wrap gap-3 items-center">
+            <button
+              onClick={downloadTemplate}
+              className="text-sm text-temple-maroon font-medium border border-temple-maroon rounded-lg px-4 py-2"
+            >
+              Download Template
+            </button>
+            <label className="text-sm bg-temple-maroon text-white rounded-lg px-4 py-2 font-medium cursor-pointer">
+              {importBusy ? 'Importing...' : 'Upload Filled Template'}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileImport}
+                disabled={importBusy}
+                className="hidden"
+              />
+            </label>
+          </div>
+          {importMessage && <p className="text-sm text-gray-600 mt-3">{importMessage}</p>}
+        </div>
+
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow p-6 mb-8 space-y-3">
+          <p className="text-xs text-gray-400 -mb-1">Or add a single item manually:</p>
           <div className="flex gap-2">
             <button
               type="button"
@@ -116,6 +225,13 @@ export default function AdminTicketTypes() {
           </p>
 
           <div className="grid grid-cols-2 gap-3">
+            <input
+              placeholder="Serial No (e.g. A-101) - optional"
+              value={form.serialNo}
+              onChange={(e) => setForm({ ...form, serialNo: e.target.value })}
+              className="border rounded-lg px-3 py-2"
+            />
+            <div />
             <input
               placeholder={
                 form.kind === 'donation'
@@ -187,6 +303,11 @@ export default function AdminTicketTypes() {
             <div key={t.id} className="flex items-center justify-between p-4">
               <div>
                 <p className="font-medium flex items-center gap-2">
+                  {t.serialNo && (
+                    <span className="text-xs font-mono bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                      {t.serialNo}
+                    </span>
+                  )}
                   {t.name}
                   {t.nameTamil && <span className="text-gray-400 font-normal"> · {t.nameTamil}</span>}
                   {t.kind === 'donation' && (

@@ -14,7 +14,9 @@ export function exportSalesToExcel(sales, { filename = 'report.xlsx', title = 'R
       'Date/Time': toDateStr(s.createdAt),
       'Ticket Type': s.ticketName,
       'Ticket Type (Tamil)': s.ticketNameTamil || '',
-      'Donor Name': s.donorName || '',
+      Name: s.name || '',
+      Nakshatra: s.nakshatra || '',
+      Phone: s.phone || '',
       'Donor Address': s.donorAddress || '',
       'Amount (LKR)': Number(s.price || 0),
       Operator: s.operator || '',
@@ -27,7 +29,9 @@ export function exportSalesToExcel(sales, { filename = 'report.xlsx', title = 'R
     { wch: 20 }, // date/time
     { wch: 24 }, // ticket type
     { wch: 24 }, // ticket type tamil
-    { wch: 20 }, // donor name
+    { wch: 20 }, // name
+    { wch: 16 }, // nakshatra
+    { wch: 16 }, // phone
     { wch: 28 }, // donor address
     { wch: 14 }, // amount
     { wch: 16 }, // operator

@@ -86,31 +86,90 @@ donation only ever needs a donor's name - trying to force both into one
 
 ## Receipt numbering (audit trail)
 
-Ticket and donation receipts each run on their own continuous number series
-that never resets by day or month - the same way a pre-printed paper ticket
-book runs continuously until it's used up. This matters for auditing: gaps
-or resets in receipt numbers are exactly what an auditor looks for.
+Every ticket type has its own continuous receipt number series that never
+resets by day or month - matching how a temple's paper ticket books work,
+where each book (Archanai, Kappu Nool, Special Puja, Donations, etc.) has
+its own printed serial numbers. This matters for auditing: gaps or resets
+in receipt numbers are exactly what an auditor looks for.
 
-Go to **Receipt Numbering** in the sidebar to set this up before you go
-live:
-- If this is a fresh start, leave "Next number" as 1 for both series.
-- If you're continuing from existing printed ticket/donation books, set
-  "Next number" to one more than the last number in your paper books, so
-  the audit trail continues without a gap.
-- Prefix and digit-padding are cosmetic (e.g. prefix `T-` with 6 digits
-  gives `T-000001`) - set them however your books are usually labeled.
+Go to **Receipt Numbering** in the sidebar - it lists every ticket type
+you've created, each with its own Prefix / Digits / Next number:
+- **New ticket type**: set its numbering up here before operators can
+  issue it. If it's a fresh start, leave "Next number" as 1. If you're
+  continuing an existing paper book, set "Next number" to one more than
+  the last number already used in that book (or exactly the number on the
+  next unused stub), so the audit trail continues without a gap.
+- Prefix and digit-padding are cosmetic (e.g. prefix `A-` with 6 digits
+  gives `A-000001`) - your paper books didn't use letter prefixes, so
+  leaving Prefix blank matches them exactly if you'd prefer plain numbers.
 
-After initial setup, this page should rarely be touched again - only use
-it again to correct a genuine mistake, and expect to explain any change to
-whoever audits the accounts.
+A brand-new ticket type **cannot be issued by an Operator until an Admin
+sets up its numbering here first** - this is enforced by the Firestore
+rules, not just a suggestion, so there's no way to accidentally issue a
+receipt with no proper series behind it.
+
+After initial setup, this page should rarely be touched again per ticket
+type - only use it again to correct a genuine mistake, and expect to
+explain any change to whoever audits the accounts.
 
 ## Donation receipts look different from ticket receipts
 
 A donation receipt is headed "DONATION RECEIPT / நன்கொடை ரசீது" and leads
-with the donor's name and address rather than a ticket name, since it's a
-record of what someone gave rather than a ticket for something they're
-attending. It uses its own receipt number series (see above) so donation
-books can be audited separately from ticket books.
+with the donor's name, address, and phone rather than a ticket name, since
+it's a record of what someone gave rather than a ticket for something
+they're attending.
+
+Puja/Archanai-style tickets also collect the devotee's **name**, an
+optional **Nakshatra (birth star)**, and an optional **phone number** at
+the point of issue - matching what the temple's paper ticket books
+already capture. Phone numbers are stored so the temple can reach
+devotees/donors later (e.g. for upcoming events), even though they're not
+required to issue a receipt.
+
+## Looking up existing devotees by phone number
+
+As soon as enough digits are typed into the Phone field, the app checks a
+small devotee directory and shows any names already on file under that
+number - tap one to fill in Name, Nakshatra, and (for donations) Address
+automatically instead of retyping them. Every time a ticket/donation is
+issued with a phone number, that person's details are saved into the
+directory automatically for next time.
+
+This directory only stores contact info (name/nakshatra/address per phone
+number) - never amounts or receipt numbers - which is what lets Operators
+use it even though they can't read the Dashboard or sales history.
+
+## Bulk-loading a large price list
+
+For a big tariff sheet (tens or hundreds of poojas/services), adding them
+one at a time in the form gets tedious fast. Instead, on **Manage Ticket
+Types**:
+
+1. Click **Download Template** - an Excel file with the right column
+   headers and one filled-in example row.
+2. Fill in one row per item: Serial No, Name (English), Name (Tamil),
+   Category (English), Category (Tamil), Kind (`puja` or `donation`), and
+   Price. Serial No should match whatever numbering your paper tariff
+   sheet already uses.
+3. Click **Upload Filled Template** and select your file.
+
+Re-uploading the same file later (with corrections, new rows, or updated
+prices) is safe - rows are matched by Serial No, so an existing item gets
+updated in place instead of creating a duplicate, and new Serial Nos just
+get added.
+
+**Important:** a newly-imported ticket type still needs its receipt
+numbering set up on the **Receipt Numbering** page before an Operator can
+issue it (see "Receipt numbering" above) - the import only creates the
+catalog entry, not its serial number series.
+
+## Quick-pick by serial number
+
+On the Issue Ticket screen, typing a Serial No into the box at the top and
+pressing Enter (or tapping Find) selects that ticket type immediately -
+faster than scrolling through categories once staff know the numbers by
+heart, the same way they'd have used the paper tariff sheet. Serial
+numbers also show on each ticket's card (`#A-101`) for cross-reference.
 
 ## Currency
 
@@ -278,10 +337,14 @@ git push -u origin main
 
 ## Data model (Firestore)
 
-- `ticketTypes/{id}` - `{ name, category, price, order, active }`
-- `sales/{id}` - `{ ticketTypeId, ticketName, price, operator, receiptNo, dateKey, printed, createdAt }`
-- `counters/{YYYYMMDD}` - `{ count }` - used to generate daily receipt numbers
-  like `20260818-0001`.
+- `ticketTypes/{id}` - `{ serialNo, name, nameTamil, category, categoryTamil, kind, price, order, active }`
+- `sales/{id}` - `{ ticketTypeId, ticketName, ticketNameTamil, kind, price, operator, name, nakshatra, phone, donorAddress, receiptNo, dateKey, printed, createdAt }`
+- `counters/{ticketTypeId}` - `{ prefix, padding, count }` - one continuous
+  receipt-number series per ticket type (see "Receipt numbering" above).
+- `roles/{uid}` - `{ role }` - `"admin"` or `"operator"`, set by hand in
+  the Firebase console (see "Setup" below).
+- `devotees/{normalizedPhone}` - `{ phone, entries: [{ name, nakshatra, address }] }`
+  - the phone lookup directory (see "Looking up existing devotees" above).
 
 ## Next steps you may want
 

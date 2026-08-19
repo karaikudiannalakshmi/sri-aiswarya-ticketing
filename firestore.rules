@@ -62,5 +62,18 @@ service cloud.firestore {
       allow update: if isSignedIn();
       allow delete: if false;
     }
+    // Devotee directory: phone number -> known names/nakshatra/address,
+    // deliberately kept separate from sales (no amounts or receipt
+    // numbers here) so an Operator can look someone up by phone without
+    // needing read access to the financial sales records above. Updated
+    // automatically whenever a ticket/donation with a phone number is
+    // issued.
+    match /devotees/{phone} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() &&
+        request.resource.data.phone is string &&
+        request.resource.data.entries is list;
+      allow delete: if false;
+    }
   }
 }

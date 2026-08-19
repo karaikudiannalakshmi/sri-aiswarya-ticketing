@@ -123,9 +123,12 @@ async function renderReceiptCanvas(fields, widthDots) {
     left(`Time / நேரம்: ${fields.timeStr}`, label, 28)
     divider()
 
-    left(`Donor / நன்கொடையாளர்: ${fields.donorName}`, label, 28)
+    left(`Donor / நன்கொடையாளர்: ${fields.name}`, label, 28)
     if (fields.donorAddress) {
       left(`Address / முகவரி: ${fields.donorAddress.replace(/\n+/g, ', ')}`, label, 28)
+    }
+    if (fields.phone) {
+      left(`Phone / தொலைபேசி: ${fields.phone}`, label, 28)
     }
     left(`Received by / பெற்றவர்: ${fields.operator}`, label, 28)
     divider()
@@ -138,6 +141,15 @@ async function renderReceiptCanvas(fields, widthDots) {
   } else {
     center(fields.ticketName, ticketBold, 38)
     center(fields.ticketNameTamil, ticketTamil, 34)
+    divider()
+
+    left(`Devotee / பக்தர்: ${fields.name}`, label, 28)
+    if (fields.nakshatra) {
+      left(`Nakshatra / நட்சத்திரம்: ${fields.nakshatra}`, label, 28)
+    }
+    if (fields.phone) {
+      left(`Phone / தொலைபேசி: ${fields.phone}`, label, 28)
+    }
     divider()
 
     left(`Receipt No / ரசீது எண்: ${fields.receiptNo}`, label, 28)
@@ -211,7 +223,9 @@ export async function buildBilingualTicketReceipt({
   dateStr,
   timeStr,
   operator,
-  donorName,
+  name,
+  nakshatra,
+  phone,
   donorAddress,
   widthDots = DEFAULT_WIDTH_DOTS
 }) {
@@ -227,7 +241,9 @@ export async function buildBilingualTicketReceipt({
       dateStr,
       timeStr,
       operator,
-      donorName,
+      name,
+      nakshatra,
+      phone,
       donorAddress
     },
     widthDots

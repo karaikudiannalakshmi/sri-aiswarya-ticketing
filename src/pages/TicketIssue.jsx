@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchTicketTypes, recordSale, markSalePrinted } from '../lib/tickets'
+import { fetchTicketTypes, recordSale, markSalePrinted, lookupDevoteesByPhone } from '../lib/tickets'
 import {
   connect as connectPrinter,
   disconnect as disconnectPrinter,
@@ -9,15 +9,20 @@ import {
   printBytes
 } from '../lib/printer'
 import { buildBilingualTicketReceipt } from '../lib/receiptImage'
+import { formatCurrency } from '../lib/currency'
 import TicketButton from '../components/TicketButton'
 
 export default function TicketIssue() {
   const [tickets, setTickets] = useState([])
   const [selected, setSelected] = useState(null)
   const [operator, setOperator] = useState(localStorage.getItem('temple_operator') || '')
-  const [donorName, setDonorName] = useState('')
+  const [name, setName] = useState('')
+  const [nakshatra, setNakshatra] = useState('')
+  const [phone, setPhone] = useState('')
+  const [phoneMatches, setPhoneMatches] = useState([])
   const [donorAddress, setDonorAddress] = useState('')
   const [donationAmount, setDonationAmount] = useState('')
+  const [quickCode, setQuickCode] = useState('')
   const [printerName, setPrinterName] = useState(null)
   const [transports] = useState(availableTransports())
   const [busy, setBusy] = useState(false)
@@ -33,18 +38,62 @@ export default function TicketIssue() {
     localStorage.setItem('temple_operator', operator)
   }, [operator])
 
-  function handleSelectTicket(ticket) {
-    setSelected(ticket)
-    setDonorName('')
+  // Look up known devotees by phone number as the operator types, so they
+  // can pick an existing name instead of retyping it. Debounced and only
+  // fires once there are enough digits to be a real number - no point
+  // querying on "9" or "98".
+  useEffect(() => {
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length < 7) {
+      setPhoneMatches([])
+      return
+    }
+    const timer = setTimeout(() => {
+      lookupDevoteesByPhone(phone).then(setPhoneMatches)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [phone])
+
+  function selectPhoneMatch(entry) {
+    setName(entry.name)
+    if (entry.nakshatra) setNakshatra(entry.nakshatra)
+    if (entry.address) setDonorAddress(entry.address)
+    setPhoneMatches([])
+  }
+
+  function resetDetails(ticket) {
+    setName('')
+    setNakshatra('')
+    setPhone('')
+    setPhoneMatches([])
     setDonorAddress('')
     setDonationAmount(ticket.kind === 'donation' ? String(ticket.price) : '')
+  }
+
+  function handleSelectTicket(ticket) {
+    setSelected(ticket)
+    resetDetails(ticket)
+    setQuickCode('')
+  }
+
+  function handleQuickCodeSubmit(e) {
+    e.preventDefault()
+    const code = quickCode.trim().toLowerCase()
+    if (!code) return
+    const match = tickets.find((t) => (t.serialNo || '').toLowerCase() === code)
+    if (match) {
+      handleSelectTicket(match)
+      setMessage('')
+    } else {
+      setMessage(`No ticket found with serial number "${quickCode.trim()}".`)
+    }
   }
 
   async function handleConnectPrinter(transport) {
     try {
       setMessage('')
-      const name = await connectPrinter(transport)
-      setPrinterName(name)
+      const printerNameResult = await connectPrinter(transport)
+      setPrinterName(printerNameResult)
     } catch (e) {
       setMessage(e.message)
     }
@@ -66,8 +115,8 @@ export default function TicketIssue() {
       setMessage('Enter operator name first.')
       return
     }
-    if (isDonation && !donorName.trim()) {
-      setMessage("Enter the donor's name first.")
+    if (!name.trim()) {
+      setMessage(isDonation ? "Enter the donor's name first." : "Enter the devotee's name first.")
       return
     }
     if (isDonation && !donorAddress.trim()) {
@@ -89,13 +138,17 @@ export default function TicketIssue() {
         kind: selected.kind || 'puja',
         price: finalAmount,
         operator: operator.trim(),
-        donorName: isDonation ? donorName.trim() : '',
+        name: name.trim(),
+        nakshatra: !isDonation ? nakshatra.trim() : '',
+        phone: phone.trim(),
         donorAddress: isDonation ? donorAddress.trim() : ''
       })
       setLastSale({
         ...sale,
         ticket: { ...selected, price: finalAmount },
-        donorName: donorName.trim(),
+        name: name.trim(),
+        nakshatra: nakshatra.trim(),
+        phone: phone.trim(),
         donorAddress: donorAddress.trim()
       })
       setMessage(`Issued: ${sale.receiptNo}`)
@@ -126,7 +179,9 @@ export default function TicketIssue() {
         dateStr: lastSale.createdAt.toLocaleDateString(),
         timeStr: lastSale.createdAt.toLocaleTimeString(),
         operator,
-        donorName: lastSale.donorName,
+        name: lastSale.name,
+        nakshatra: lastSale.nakshatra,
+        phone: lastSale.phone,
         donorAddress: lastSale.donorAddress
       })
       await printBytes(bytes)
@@ -193,6 +248,34 @@ export default function TicketIssue() {
           </p>
         )}
 
+        <form onSubmit={handleQuickCodeSubmit} className="flex gap-2">
+          <input
+            value={quickCode}
+            onChange={(e) => setQuickCode(e.target.value)}
+            placeholder="Enter serial no. (e.g. A-101) and press Enter"
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-white"
+          />
+          <button
+            type="submit"
+            className="bg-temple-maroon text-white px-4 py-2 rounded-lg text-sm font-medium shrink-0"
+          >
+            Find
+          </button>
+        </form>
+        {selected && (
+          <div className="bg-temple-maroon/5 border border-temple-maroon/20 rounded-lg px-3 py-2 text-sm">
+            Selected:{' '}
+            <span className="font-semibold text-base">
+              {selected.nameTamil || selected.name}
+            </span>
+            {selected.nameTamil && (
+              <span className="text-gray-500"> · {selected.name}</span>
+            )}
+            {' — '}
+            <span className="font-semibold">{formatCurrency(selected.price)}</span>
+          </div>
+        )}
+
         {categories.map((cat) => (
           <div key={cat}>
             <h2 className="text-sm font-semibold text-gray-500 uppercase mb-2">{cat}</h2>
@@ -211,31 +294,75 @@ export default function TicketIssue() {
           </div>
         ))}
 
-        {isDonation && (
-          <div className="bg-white rounded-xl p-4 border-2 border-temple-gold space-y-3">
-            <p className="text-sm font-semibold text-temple-maroon">Donation details</p>
+        {selected && (
+          <div
+            className={`bg-white rounded-xl p-4 border-2 space-y-3 ${
+              isDonation ? 'border-temple-gold' : 'border-temple-maroon/30'
+            }`}
+          >
+            <p className="text-sm font-semibold text-temple-maroon">
+              {isDonation ? 'Donation details' : 'Devotee details'}
+            </p>
             <input
-              value={donorName}
-              onChange={(e) => setDonorName(e.target.value)}
-              placeholder="Donor's name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={isDonation ? "Donor's name" : "Devotee's name"}
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
-            <textarea
-              value={donorAddress}
-              onChange={(e) => setDonorAddress(e.target.value)}
-              placeholder="Donor's address"
-              rows={2}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 resize-none"
-            />
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">Amount</span>
+            {!isDonation && (
               <input
-                type="number"
-                value={donationAmount}
-                onChange={(e) => setDonationAmount(e.target.value)}
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
+                value={nakshatra}
+                onChange={(e) => setNakshatra(e.target.value)}
+                placeholder="Nakshatra (birth star) - optional"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
               />
-            </div>
+            )}
+            {isDonation && (
+              <textarea
+                value={donorAddress}
+                onChange={(e) => setDonorAddress(e.target.value)}
+                placeholder="Donor's address"
+                rows={2}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 resize-none"
+              />
+            )}
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Phone number - optional"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+            {phoneMatches.length > 0 && (
+              <div className="border border-temple-gold/50 bg-temple-cream rounded-lg p-2 space-y-1">
+                <p className="text-xs text-gray-500 px-1">
+                  Found under this number - tap to fill in:
+                </p>
+                {phoneMatches.map((entry, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => selectPhoneMatch(entry)}
+                    className="w-full text-left bg-white rounded-lg px-3 py-2 text-sm border border-gray-200 active:scale-95 transition"
+                  >
+                    <span className="font-medium">{entry.name}</span>
+                    {entry.nakshatra && (
+                      <span className="text-gray-400"> · {entry.nakshatra}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            {isDonation && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">Amount</span>
+                <input
+                  type="number"
+                  value={donationAmount}
+                  onChange={(e) => setDonationAmount(e.target.value)}
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+            )}
           </div>
         )}
 
