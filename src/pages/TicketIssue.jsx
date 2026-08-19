@@ -10,6 +10,7 @@ import {
 } from '../lib/printer'
 import { buildBilingualTicketReceipt } from '../lib/receiptImage'
 import { formatCurrency } from '../lib/currency'
+import { NAKSHATRAS } from '../lib/nakshatras'
 import TicketButton from '../components/TicketButton'
 
 export default function TicketIssue() {
@@ -384,12 +385,18 @@ export default function TicketIssue() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
             {!isDonation && (
-              <input
+              <select
                 value={nakshatra}
                 onChange={(e) => setNakshatra(e.target.value)}
-                placeholder="Nakshatra (birth star) - optional"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-800"
+              >
+                <option value="">Nakshatra (birth star) - optional</option>
+                {NAKSHATRAS.map((n) => (
+                  <option key={n.ta} value={n.ta}>
+                    {n.ta} · {n.en}
+                  </option>
+                ))}
+              </select>
             )}
             {isDonation && (
               <textarea

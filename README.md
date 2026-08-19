@@ -121,9 +121,12 @@ they're attending.
 
 Puja/Archanai-style tickets also collect the devotee's **phone number**
 and **name** (both required), plus an optional **Nakshatra (birth star)**
-- matching what the temple's paper ticket books already capture. Phone
-number is required on every ticket and donation, since it's the key used
-to look devotees up later and to build the phone directory (see below).
+- picked from a dropdown of the standard 27 nakshatras (in Tamil, e.g.
+"கார்த்திகை") rather than typed freely, so records stay consistent for
+future search/reports. Matching what the temple's paper ticket books
+already capture. Phone number is required on every ticket and donation,
+since it's the key used to look devotees up later and to build the phone
+directory (see below).
 
 ## Looking up existing devotees by phone number
 
