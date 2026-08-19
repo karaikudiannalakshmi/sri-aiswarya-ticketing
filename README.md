@@ -119,12 +119,11 @@ with the donor's name, address, and phone rather than a ticket name, since
 it's a record of what someone gave rather than a ticket for something
 they're attending.
 
-Puja/Archanai-style tickets also collect the devotee's **name**, an
-optional **Nakshatra (birth star)**, and an optional **phone number** at
-the point of issue - matching what the temple's paper ticket books
-already capture. Phone numbers are stored so the temple can reach
-devotees/donors later (e.g. for upcoming events), even though they're not
-required to issue a receipt.
+Puja/Archanai-style tickets also collect the devotee's **phone number**
+and **name** (both required), plus an optional **Nakshatra (birth star)**
+- matching what the temple's paper ticket books already capture. Phone
+number is required on every ticket and donation, since it's the key used
+to look devotees up later and to build the phone directory (see below).
 
 ## Looking up existing devotees by phone number
 

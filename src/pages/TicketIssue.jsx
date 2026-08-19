@@ -147,6 +147,10 @@ export default function TicketIssue() {
       setMessage('Enter operator name first.')
       return
     }
+    if (!phone.trim()) {
+      setMessage('Enter a phone number first.')
+      return
+    }
     if (!name.trim()) {
       setMessage(isDonation ? "Enter the donor's name first." : "Enter the devotee's name first.")
       return
@@ -347,32 +351,10 @@ export default function TicketIssue() {
               {isDonation ? 'Donation details' : 'Devotee details'}
             </p>
             <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={isDonation ? "Donor's name" : "Devotee's name"}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            />
-            {!isDonation && (
-              <input
-                value={nakshatra}
-                onChange={(e) => setNakshatra(e.target.value)}
-                placeholder="Nakshatra (birth star) - optional"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              />
-            )}
-            {isDonation && (
-              <textarea
-                value={donorAddress}
-                onChange={(e) => setDonorAddress(e.target.value)}
-                placeholder="Donor's address"
-                rows={2}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 resize-none"
-              />
-            )}
-            <input
+              type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="Phone number - optional"
+              placeholder="Phone number"
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
             {phoneMatches.length > 0 && (
@@ -394,6 +376,29 @@ export default function TicketIssue() {
                   </button>
                 ))}
               </div>
+            )}
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={isDonation ? "Donor's name" : "Devotee's name"}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+            {!isDonation && (
+              <input
+                value={nakshatra}
+                onChange={(e) => setNakshatra(e.target.value)}
+                placeholder="Nakshatra (birth star) - optional"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              />
+            )}
+            {isDonation && (
+              <textarea
+                value={donorAddress}
+                onChange={(e) => setDonorAddress(e.target.value)}
+                placeholder="Donor's address"
+                rows={2}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 resize-none"
+              />
             )}
             {isDonation && (
               <div className="flex items-center gap-2">
