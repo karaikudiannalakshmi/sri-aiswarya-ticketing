@@ -9,6 +9,7 @@ import {
   printBytes
 } from '../lib/printer'
 import { buildBilingualTicketReceipt } from '../lib/receiptImage'
+import { printReceiptViaSystemDialog } from '../lib/receiptSystemPrint'
 import { formatCurrency } from '../lib/currency'
 import { NAKSHATRAS } from '../lib/nakshatras'
 import TicketButton from '../components/TicketButton'
@@ -207,20 +208,7 @@ export default function TicketIssue() {
       if (!isConnected()) {
         throw new Error('Connect a printer first (Bluetooth or USB, above).')
       }
-      const bytes = await buildBilingualTicketReceipt({
-        ticketName: lastSale.ticket.name,
-        ticketNameTamil: lastSale.ticket.nameTamil,
-        kind: lastSale.ticket.kind || 'puja',
-        price: lastSale.ticket.price,
-        receiptNo: lastSale.receiptNo,
-        dateStr: lastSale.createdAt.toLocaleDateString(),
-        timeStr: lastSale.createdAt.toLocaleTimeString(),
-        operator,
-        name: lastSale.name,
-        nakshatra: lastSale.nakshatra,
-        phone: lastSale.phone,
-        donorAddress: lastSale.donorAddress
-      })
+      const bytes = await buildBilingualTicketReceipt(receiptFieldsFor(lastSale))
       await printBytes(bytes)
       await markSalePrinted(lastSale.id)
       setMessage('Printed ' + lastSale.receiptNo)
@@ -228,6 +216,38 @@ export default function TicketIssue() {
       setMessage('Print failed: ' + e.message)
     } finally {
       setBusy(false)
+    }
+  }
+
+  function receiptFieldsFor(sale) {
+    return {
+      ticketName: sale.ticket.name,
+      ticketNameTamil: sale.ticket.nameTamil,
+      kind: sale.ticket.kind || 'puja',
+      price: sale.ticket.price,
+      receiptNo: sale.receiptNo,
+      dateStr: sale.createdAt.toLocaleDateString(),
+      timeStr: sale.createdAt.toLocaleTimeString(),
+      operator,
+      name: sale.name,
+      nakshatra: sale.nakshatra,
+      phone: sale.phone,
+      donorAddress: sale.donorAddress
+    }
+  }
+
+  async function handleSystemPrint() {
+    if (!lastSale) {
+      setMessage('Issue a ticket before printing.')
+      return
+    }
+    setMessage('')
+    try {
+      printReceiptViaSystemDialog(receiptFieldsFor(lastSale))
+      await markSalePrinted(lastSale.id)
+      setMessage('Opened print dialog for ' + lastSale.receiptNo)
+    } catch (e) {
+      setMessage('Print failed: ' + e.message)
     }
   }
 
@@ -452,6 +472,16 @@ export default function TicketIssue() {
           <div className="text-sm bg-white border border-gray-200 rounded-lg p-3 text-gray-700">
             {message}
           </div>
+        )}
+
+        {lastSale && (
+          <button
+            type="button"
+            onClick={handleSystemPrint}
+            className="text-sm text-temple-maroon font-medium underline"
+          >
+            Print via System Dialog instead (regular printer, e.g. a laser/inkjet)
+          </button>
         )}
       </div>
 
