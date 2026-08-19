@@ -22,6 +22,34 @@ export function exportSalesToExcel(sales, { filename = 'report.xlsx', title = 'R
       Operator: s.operator || '',
       Printed: s.printed ? 'Yes' : 'No'
     }))
+
+  const grandTotal = sales.reduce((sum, s) => sum + Number(s.price || 0), 0)
+  // A blank spacer row, then a TOTAL row right under the transaction
+  // list itself - not just on the separate Summary tab - since that's
+  // the total most people look for first and shouldn't require
+  // switching sheets to find. Every key from the data rows is included
+  // (even if blank) so the columns line up correctly.
+  const blankRow = {
+    'Receipt No': '',
+    Type: '',
+    'Date/Time': '',
+    'Ticket Type': '',
+    'Ticket Type (Tamil)': '',
+    Name: '',
+    Nakshatra: '',
+    Phone: '',
+    'Donor Address': '',
+    'Amount (LKR)': '',
+    Operator: '',
+    Printed: ''
+  }
+  txnRows.push({ ...blankRow })
+  txnRows.push({
+    ...blankRow,
+    'Ticket Type': `TOTAL (${sales.length} ${sales.length === 1 ? 'ticket' : 'tickets'})`,
+    'Amount (LKR)': grandTotal
+  })
+
   const txnSheet = XLSX.utils.json_to_sheet(txnRows)
   txnSheet['!cols'] = [
     { wch: 18 }, // receipt no
@@ -41,7 +69,7 @@ export function exportSalesToExcel(sales, { filename = 'report.xlsx', title = 'R
 
   const byType = {}
   for (const s of sales) {
-    const key = s.ticketName || 'Unknown'
+    const key = s.ticketNameTamil || s.ticketName || 'Unknown'
     if (!byType[key]) byType[key] = { count: 0, total: 0 }
     byType[key].count += 1
     byType[key].total += Number(s.price || 0)
@@ -53,7 +81,6 @@ export function exportSalesToExcel(sales, { filename = 'report.xlsx', title = 'R
       'Tickets Sold': data.count,
       'Total (LKR)': data.total
     }))
-  const grandTotal = sales.reduce((sum, s) => sum + Number(s.price || 0), 0)
   summaryRows.push({
     'Ticket Type': 'TOTAL',
     'Tickets Sold': sales.length,
