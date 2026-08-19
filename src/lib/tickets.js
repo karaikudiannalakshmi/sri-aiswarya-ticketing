@@ -157,28 +157,35 @@ export async function bulkUpsertTicketTypes(rows, { replaceAll = false } = {}) {
 //
 // Receipt numbers never reset - they run continuously for the life of the
 // temple's records, the same way a pre-printed paper ticket book runs
-// continuously until it's used up. Every ticket type gets its OWN series
-// (matching how the temple's real paper books work - Archanai, Kappu
-// Nool, Special Puja, and Donations are all numbered independently), keyed
-// by that ticket type's own Firestore document ID:
-//   counters/<ticketType id>  -> { prefix, padding, count }
+// continuously until it's used up. There are exactly two series, shared
+// across all ticket types of that kind - one for every Puja/Ticket, one
+// for every Donation - rather than one series per individual ticket type.
+// With a large catalog (dozens or hundreds of ticket types), a separate
+// series per type would mean setting up numbering individually for each
+// one before it could be issued; two shared series keeps setup to a
+// single one-time step per kind.
+//   counters/ticketSeries    -> { prefix, padding, count }
+//   counters/donationSeries  -> { prefix, padding, count }
 // `count` is the last number issued; the next one issued is count + 1.
+
+const SERIES_BY_KIND = {
+  puja: 'ticketSeries',
+  donation: 'donationSeries'
+}
 
 const DEFAULT_SERIES = { prefix: '', padding: 6, count: 0 }
 
-export async function getSeriesSettings(ticketTypeId) {
-  const snap = await getDoc(doc(db, 'counters', ticketTypeId))
+export async function getSeriesSettings(seriesId) {
+  const snap = await getDoc(doc(db, 'counters', seriesId))
   return snap.exists() ? snap.data() : DEFAULT_SERIES
 }
 
-// Sets up or corrects a ticket type's series: nextNumber is the number
-// that should be issued NEXT (e.g. if the paper book for this ticket type
-// is already up to 2216, set nextNumber to 2217 to continue the same
-// audit trail in this system, matching what's printed on the next unused
-// paper stub).
-export async function setSeriesSettings(ticketTypeId, { prefix, padding, nextNumber }) {
+// Sets up or corrects a series: nextNumber is the number that should be
+// issued NEXT (e.g. if your existing printed books go up to 5000, set
+// nextNumber to 5001 to continue the same audit trail in this system).
+export async function setSeriesSettings(seriesId, { prefix, padding, nextNumber }) {
   await setDoc(
-    doc(db, 'counters', ticketTypeId),
+    doc(db, 'counters', seriesId),
     { prefix, padding: Number(padding), count: Number(nextNumber) - 1 },
     { merge: true }
   )
@@ -188,8 +195,8 @@ function formatReceiptNo({ prefix, padding, number }) {
   return `${prefix || ''}${String(number).padStart(padding || 1, '0')}`
 }
 
-async function getNextReceiptNo(ticketTypeId) {
-  const counterRef = doc(db, 'counters', ticketTypeId)
+async function getNextReceiptNo(seriesId) {
+  const counterRef = doc(db, 'counters', seriesId)
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(counterRef)
     const current = snap.exists() ? snap.data() : DEFAULT_SERIES
@@ -220,7 +227,8 @@ export async function recordSale({
 }) {
   const now = new Date()
   const dateKey = dateKeyFor(now)
-  const receiptNo = await getNextReceiptNo(ticketTypeId)
+  const seriesId = SERIES_BY_KIND[kind] || SERIES_BY_KIND.puja
+  const receiptNo = await getNextReceiptNo(seriesId)
 
   const docRef = await addDoc(salesCol, {
     ticketTypeId,

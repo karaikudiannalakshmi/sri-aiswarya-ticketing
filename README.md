@@ -86,33 +86,29 @@ donation only ever needs a donor's name - trying to force both into one
 
 ## Receipt numbering (audit trail)
 
-Every ticket type has its own continuous receipt number series that never
-resets by day or month - matching how a temple's paper ticket books work,
-where each book (Archanai, Kappu Nool, Special Puja, Donations, etc.) has
-its own printed serial numbers. This matters for auditing: gaps or resets
-in receipt numbers are exactly what an auditor looks for.
+Ticket and donation receipts each run on their own continuous number
+series that never resets by day or month - the same way a pre-printed
+paper ticket book runs continuously until it's used up. **All Puja/Ticket
+types share one series, and all Donations share a separate one** - not
+one series per individual ticket type, since with a large catalog (dozens
+or hundreds of items) that would mean setting up numbering individually
+for every single one before it could be issued.
 
-Go to **Receipt Numbering** in the sidebar - it lists every ticket type
-you've created, each with its own Prefix / Digits / Next number:
-- **New ticket type**: set its numbering up here before operators can
-  issue it. If it's a fresh start, leave "Next number" as 1. If you're
-  continuing an existing paper book, set "Next number" to one more than
-  the last number already used in that book (or exactly the number on the
-  next unused stub), so the audit trail continues without a gap.
-- Prefix and digit-padding are cosmetic (e.g. prefix `A-` with 6 digits
-  gives `A-000001`) - your paper books didn't use letter prefixes, so
-  leaving Prefix blank matches them exactly if you'd prefer plain numbers.
+Go to **Receipt Numbering** in the sidebar to set this up before you go
+live:
+- If this is a fresh start, leave "Next number" as 1 for both series.
+- If you're continuing from existing printed ticket/donation books, set
+  "Next number" to one more than the last number in your paper books, so
+  the audit trail continues without a gap.
+- Prefix and digit-padding are cosmetic (e.g. prefix `T-` with 6 digits
+  gives `T-000001`) - leave Prefix blank for plain numbers.
 
-A brand-new ticket type **cannot be issued by an Operator until an Admin
-sets up its numbering here first** - this is enforced by the Firestore
-rules, not just a suggestion, so there's no way to accidentally issue a
-receipt with no proper series behind it.
-
-After initial setup, this page should rarely be touched again per ticket
-type - only use it again to correct a genuine mistake, and expect to
-explain any change to whoever audits the accounts.
+After initial setup, this page should rarely be touched again - only use
+it again to correct a genuine mistake, and expect to explain any change to
+whoever audits the accounts.
 
 ## Donation receipts look different from ticket receipts
+
 
 A donation receipt is headed "DONATION RECEIPT / நன்கொடை ரசீது" and leads
 with the donor's name, address, and phone rather than a ticket name, since
@@ -371,8 +367,8 @@ git push -u origin main
 
 - `ticketTypes/{id}` - `{ serialNo, name, nameTamil, category, categoryTamil, kind, price, order, active }`
 - `sales/{id}` - `{ ticketTypeId, ticketName, ticketNameTamil, kind, price, operator, name, nakshatra, phone, donorAddress, receiptNo, dateKey, printed, createdAt }`
-- `counters/{ticketTypeId}` - `{ prefix, padding, count }` - one continuous
-  receipt-number series per ticket type (see "Receipt numbering" above).
+- `counters/ticketSeries` and `counters/donationSeries` - `{ prefix, padding, count }` -
+  the two shared receipt-number series (see "Receipt numbering" above).
 - `roles/{uid}` - `{ role }` - `"admin"` or `"operator"`, set by hand in
   the Firebase console (see "Setup" below).
 - `devotees/{normalizedPhone}` - `{ phone, entries: [{ name, nakshatra, address }] }`
