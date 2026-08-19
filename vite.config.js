@@ -51,7 +51,15 @@ export default defineConfig({
               url.hostname.includes('firestore') || url.hostname.includes('googleapis'),
             handler: 'NetworkOnly'
           }
-        ]
+        ],
+        // Makes a newly-deployed version take over as soon as it's
+        // installed, instead of waiting for every open tab to be fully
+        // closed first - without this, a device can sit on an old cached
+        // build indefinitely if the app (or an installed PWA) is never
+        // fully quit.
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true
       }
     })
   ],
