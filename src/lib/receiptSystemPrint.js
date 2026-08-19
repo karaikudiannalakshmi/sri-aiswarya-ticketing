@@ -10,10 +10,8 @@
 // thermal-printer receipt (src/lib/receiptImage.js) - kept here too since
 // this module builds its own HTML independently rather than sharing that
 // function, and a missing default here would silently print a receipt
-// with no temple name at all.
-const DEFAULT_TEMPLE_NAME = 'Sri Aishwarya Lakshmi Temple, Colombo'
+// with no temple name at all. Tamil-only, per the temple's preference.
 const DEFAULT_TEMPLE_NAME_TAMIL = 'ஸ்ரீ ஐசுவர்ய லட்சுமி திருக்கோயில், கொழும்பு'
-const DEFAULT_TEMPLE_ADDRESS = 'Kamban Kottam, No. 11, Ramakrishna Thottam, Colombo-06'
 const DEFAULT_TEMPLE_ADDRESS_TAMIL = 'கம்பன் கோட்டம், இல. 11, இராமகிருஷ்ண தோட்டம், கொழும்பு-06'
 const DEFAULT_TEMPLE_PHONE = ''
 
@@ -64,9 +62,8 @@ function buildReceiptBodyHtml(fields) {
 
   return `
     <div class="temple">
-      <p class="temple-en">${escapeHtml(fields.templeName || DEFAULT_TEMPLE_NAME)}</p>
       <p class="temple-ta">${escapeHtml(fields.templeNameTamil || DEFAULT_TEMPLE_NAME_TAMIL)}</p>
-      <p class="temple-address">${escapeHtml(fields.templeAddress || DEFAULT_TEMPLE_ADDRESS)}</p>
+      <p class="temple-address">${escapeHtml(fields.templeAddress || DEFAULT_TEMPLE_ADDRESS_TAMIL)}</p>
       ${
         fields.templePhone || DEFAULT_TEMPLE_PHONE
           ? `<p class="temple-address">Tel: ${escapeHtml(fields.templePhone || DEFAULT_TEMPLE_PHONE)}</p>`
@@ -112,8 +109,7 @@ export function printReceiptViaSystemDialog(fields) {
   }
   hr { border: none; border-top: 2px solid #7A1F2B; margin: 14px 0; }
   .temple { text-align: center; }
-  .temple-en { font-weight: 700; font-size: 18px; margin: 0; color: #7A1F2B; }
-  .temple-ta { font-weight: 700; font-size: 16px; margin: 4px 0 0; color: #7A1F2B; }
+  .temple-ta { font-weight: 700; font-size: 19px; margin: 0; color: #7A1F2B; }
   .temple-address { font-size: 11px; margin: 3px 0 0; color: #777; }
   .section-en { text-align: center; font-weight: 700; font-size: 15px; margin: 0; }
   .section-ta { text-align: center; font-weight: 700; font-size: 14px; margin: 2px 0 0; }

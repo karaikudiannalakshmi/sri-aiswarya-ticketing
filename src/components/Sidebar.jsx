@@ -21,7 +21,7 @@ export default function Sidebar({ role }) {
       {/* Mobile top bar */}
       <div className="md:hidden flex items-center justify-between bg-temple-maroon text-white px-4 py-3 sticky top-0 z-30 shadow">
         <div>
-          <p className="font-bold leading-tight">Sri Aishwarya Lakshmi Temple</p>
+          <p className="font-bold leading-tight">ஸ்ரீ ஐசுவர்ய லட்சுமி திருக்கோயில்</p>
           <p className="text-xs opacity-80">{role === 'admin' ? 'Admin' : 'Operator'}</p>
         </div>
         <div className="flex items-center gap-4">
@@ -56,8 +56,8 @@ export default function Sidebar({ role }) {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col w-64 shrink-0 bg-temple-maroon text-white min-h-screen p-5">
         <div className="mb-10">
-          <p className="font-bold text-lg leading-tight">Sri Aishwarya</p>
-          <p className="font-bold text-lg leading-tight">Lakshmi Temple</p>
+          <p className="font-bold text-lg leading-tight">ஸ்ரீ ஐசுவர்ய லட்சுமி</p>
+          <p className="font-bold text-lg leading-tight">திருக்கோயில்</p>
           <p className="text-xs opacity-70 mt-1">{role === 'admin' ? 'Admin' : 'Operator'}</p>
         </div>
         <NavItems items={navItems} />

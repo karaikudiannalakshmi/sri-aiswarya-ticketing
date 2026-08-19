@@ -95,7 +95,6 @@ async function renderReceiptCanvas(fields, widthDots) {
   }
 
   const templeBold = `bold 26px ${FONT_STACK}`
-  const templeTamil = `bold 24px ${FONT_STACK}`
   const templeAddress = `18px ${FONT_STACK}`
   const ticketBold = `bold 30px ${FONT_STACK}`
   const ticketTamil = `bold 27px ${FONT_STACK}`
@@ -104,8 +103,7 @@ async function renderReceiptCanvas(fields, widthDots) {
   const priceFont = `bold 46px ${FONT_STACK}`
   const footer = `22px ${FONT_STACK}`
 
-  center(fields.templeName, templeBold, 32)
-  center(fields.templeNameTamil, templeTamil, 30)
+  center(fields.templeNameTamil, templeBold, 34)
   center(fields.templeAddress || DEFAULT_TEMPLE_ADDRESS, templeAddress, 24)
   divider()
 

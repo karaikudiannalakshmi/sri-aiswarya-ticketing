@@ -28,7 +28,7 @@ export default function Login({ onSuccess }) {
         className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm border-t-4 border-temple-maroon"
       >
         <h1 className="text-xl font-bold text-temple-maroon mb-1 text-center">
-          Sri Aishwarya Lakshmi Temple
+          ஸ்ரீ ஐசுவர்ய லட்சுமி திருக்கோயில்
         </h1>
         <p className="text-sm text-gray-500 mb-6 text-center">Ticketing System</p>
 
