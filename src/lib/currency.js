@@ -1,5 +1,3 @@
-// Central place for currency formatting so it's a one-line change if this
-// ever needs to support a different currency or locale formatting.
 const CURRENCY_CODE = 'LKR'
 
 export function formatCurrency(amount) {

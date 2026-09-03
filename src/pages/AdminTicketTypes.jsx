@@ -172,9 +172,6 @@ export default function AdminTicketTypes() {
     XLSX.writeFile(wb, 'ticket-types-import-template.xlsx')
   }
 
-  // Exports the current live catalog in the exact same column format as
-  // the import template, so it can be edited (e.g. merged with another
-  // list, renumbered) and re-uploaded through the same Import flow.
   function exportCurrentTicketTypes() {
     const headers = [
       'Serial No',

@@ -41,10 +41,6 @@ export default function TicketIssue() {
     localStorage.setItem('temple_operator', operator)
   }, [operator])
 
-  // Look up known devotees by phone number as the operator types, so they
-  // can pick an existing name instead of retyping it. Debounced and only
-  // fires once there are enough digits to be a real number - no point
-  // querying on "9" or "98".
   useEffect(() => {
     const digits = phone.replace(/\D/g, '')
     if (digits.length < 7) {
@@ -92,13 +88,6 @@ export default function TicketIssue() {
     }
   }
 
-  // Live suggestions as the operator types - matches on serial number
-  // (from the start, since that's how a printed tariff sheet works) or
-  // anywhere in the English/Tamil name (for when the number is forgotten).
-  // Sorted so an exact serial number match always comes first, then
-  // other serial-prefix matches in numeric order, then name matches -
-  // otherwise typing "1" would show 1, 10, 11, 12...121 in whatever
-  // arbitrary order they happen to be in, with "1" itself easy to miss.
   const quickMatches = (() => {
     const q = quickCode.trim().toLowerCase()
     if (!q) return []
@@ -197,6 +186,23 @@ export default function TicketIssue() {
     }
   }
 
+  function receiptFieldsFor(sale) {
+    return {
+      ticketName: sale.ticket.name,
+      ticketNameTamil: sale.ticket.nameTamil,
+      kind: sale.ticket.kind || 'puja',
+      price: sale.ticket.price,
+      receiptNo: sale.receiptNo,
+      dateStr: sale.createdAt.toLocaleDateString(),
+      timeStr: sale.createdAt.toLocaleTimeString(),
+      operator,
+      name: sale.name,
+      nakshatra: sale.nakshatra,
+      phone: sale.phone,
+      donorAddress: sale.donorAddress
+    }
+  }
+
   async function handlePrint() {
     if (!lastSale) {
       setMessage('Issue a ticket before printing.')
@@ -216,23 +222,6 @@ export default function TicketIssue() {
       setMessage('Print failed: ' + e.message)
     } finally {
       setBusy(false)
-    }
-  }
-
-  function receiptFieldsFor(sale) {
-    return {
-      ticketName: sale.ticket.name,
-      ticketNameTamil: sale.ticket.nameTamil,
-      kind: sale.ticket.kind || 'puja',
-      price: sale.ticket.price,
-      receiptNo: sale.receiptNo,
-      dateStr: sale.createdAt.toLocaleDateString(),
-      timeStr: sale.createdAt.toLocaleTimeString(),
-      operator,
-      name: sale.name,
-      nakshatra: sale.nakshatra,
-      phone: sale.phone,
-      donorAddress: sale.donorAddress
     }
   }
 
@@ -335,9 +324,7 @@ export default function TicketIssue() {
                       <span className="font-mono text-gray-400 mr-2">#{t.serialNo}</span>
                     )}
                     <span className="font-medium">{t.nameTamil || t.name}</span>
-                    {t.nameTamil && (
-                      <span className="text-gray-400"> · {t.name}</span>
-                    )}
+                    {t.nameTamil && <span className="text-gray-400"> · {t.name}</span>}
                   </span>
                   <span className="text-sm font-semibold text-temple-maroon shrink-0">
                     {formatCurrency(t.price)}
@@ -354,9 +341,7 @@ export default function TicketIssue() {
             <span className="font-semibold text-base">
               {selected.nameTamil || selected.name}
             </span>
-            {selected.nameTamil && (
-              <span className="text-gray-500"> · {selected.name}</span>
-            )}
+            {selected.nameTamil && <span className="text-gray-500"> · {selected.name}</span>}
             {' — '}
             <span className="font-semibold">{formatCurrency(selected.price)}</span>
           </div>

@@ -12,9 +12,6 @@ function summarize(sales) {
   const total = sales.reduce((sum, s) => sum + Number(s.price || 0), 0)
   const byTicket = {}
   for (const s of sales) {
-    // Group and display by the Tamil name, since that's what operators
-    // and reports actually use day to day - fall back to English only if
-    // a ticket type has no Tamil name set.
     const key = s.ticketNameTamil || s.ticketName
     if (!byTicket[key]) byTicket[key] = { count: 0, total: 0 }
     byTicket[key].count += 1
@@ -62,7 +59,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     load()
-    const interval = setInterval(load, 60000) // refresh every minute
+    const interval = setInterval(load, 60000)
     return () => clearInterval(interval)
   }, [])
 

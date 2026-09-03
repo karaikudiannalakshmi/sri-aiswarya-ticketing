@@ -1,8 +1,3 @@
-// Picks between the Bluetooth (phone) and USB/Web Serial (PC) transports so
-// the rest of the app doesn't need to know which one is active. The choice
-// is remembered per-device in localStorage, since a phone will always use
-// Bluetooth and a PC ticket counter will always use USB.
-
 import * as bt from './bluetoothPrinter'
 import * as serial from './serialPrinter'
 
@@ -10,15 +5,13 @@ const TRANSPORT_KEY = 'temple_printer_transport'
 const PAPER_WIDTH_KEY = 'temple_printer_paper_width'
 
 export function getTransport() {
-  return localStorage.getItem(TRANSPORT_KEY) || null // 'bluetooth' | 'usb' | null
+  return localStorage.getItem(TRANSPORT_KEY) || null
 }
 
 export function setTransport(transport) {
   localStorage.setItem(TRANSPORT_KEY, transport)
 }
 
-// 384 dots = common 58mm thermal paper, 576 dots = 80mm. Defaults to 58mm
-// since that's the cheaper/more common size for compact receipt printers.
 export function getPaperWidthDots() {
   return Number(localStorage.getItem(PAPER_WIDTH_KEY)) || 384
 }

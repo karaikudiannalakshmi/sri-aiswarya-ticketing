@@ -160,10 +160,6 @@ export async function bulkUpsertTicketTypes(rows, { replaceAll = false } = {}) {
 // continuously until it's used up. There are exactly two series, shared
 // across all ticket types of that kind - one for every Puja/Ticket, one
 // for every Donation - rather than one series per individual ticket type.
-// With a large catalog (dozens or hundreds of ticket types), a separate
-// series per type would mean setting up numbering individually for each
-// one before it could be issued; two shared series keeps setup to a
-// single one-time step per kind.
 //   counters/ticketSeries    -> { prefix, padding, count }
 //   counters/donationSeries  -> { prefix, padding, count }
 // `count` is the last number issued; the next one issued is count + 1.
@@ -180,9 +176,6 @@ export async function getSeriesSettings(seriesId) {
   return snap.exists() ? snap.data() : DEFAULT_SERIES
 }
 
-// Sets up or corrects a series: nextNumber is the number that should be
-// issued NEXT (e.g. if your existing printed books go up to 5000, set
-// nextNumber to 5001 to continue the same audit trail in this system).
 export async function setSeriesSettings(seriesId, { prefix, padding, nextNumber }) {
   await setDoc(
     doc(db, 'counters', seriesId),
@@ -325,6 +318,14 @@ export async function fetchSalesBetween(startDate, endDate) {
     where('createdAt', '<', Timestamp.fromDate(endDate)),
     orderBy('createdAt', 'desc')
   )
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+}
+
+// Fetches every sale ever recorded - used for things like lifetime donor
+// totals, where a date-windowed query wouldn't give the full picture.
+export async function fetchAllSales() {
+  const q = query(salesCol, orderBy('createdAt', 'desc'))
   const snap = await getDocs(q)
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }

@@ -5,6 +5,8 @@ import TicketIssue from './pages/TicketIssue'
 import Dashboard from './pages/Dashboard'
 import AdminTicketTypes from './pages/AdminTicketTypes'
 import ReceiptNumbering from './pages/ReceiptNumbering'
+import Letters from './pages/Letters'
+import DevoteeDirectory from './pages/DevoteeDirectory'
 import Layout from './components/Layout'
 import { auth, fetchMyRole, logout } from './firebase'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -14,9 +16,6 @@ export default function App() {
   const [role, setRole] = useState(null)
 
   useEffect(() => {
-    // Single source of truth for auth state - fires once immediately with
-    // whatever Firebase already knows (signed in or not), then again on
-    // every login/logout after that. No separate "check once" step needed.
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         setRole(null)
@@ -81,6 +80,11 @@ export default function App() {
         <Route
           path="/receipt-numbering"
           element={isAdmin ? <ReceiptNumbering /> : <Navigate to="/issue" replace />}
+        />
+        <Route path="/letters" element={isAdmin ? <Letters /> : <Navigate to="/issue" replace />} />
+        <Route
+          path="/devotees"
+          element={isAdmin ? <DevoteeDirectory /> : <Navigate to="/issue" replace />}
         />
         <Route path="*" element={<NotFound />} />
       </Routes>

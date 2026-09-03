@@ -37,13 +37,8 @@ export default defineConfig({
           }
         ]
       },
-      // Precache the app shell (HTML/JS/CSS/font) so the app still opens
-      // (though it needs network for Firestore/printing to actually work)
-      // even on a flaky connection, and so repeat opens are instant.
       workbox: {
         globPatterns: ['**/*.{js,css,html,ttf,png,svg}'],
-        // Never cache Firebase/Firestore requests - always hit the network
-        // so ticket sales, prices, and totals are always current.
         navigateFallbackDenylist: [/^\/__/],
         runtimeCaching: [
           {
@@ -52,11 +47,6 @@ export default defineConfig({
             handler: 'NetworkOnly'
           }
         ],
-        // Makes a newly-deployed version take over as soon as it's
-        // installed, instead of waiting for every open tab to be fully
-        // closed first - without this, a device can sit on an old cached
-        // build indefinitely if the app (or an installed PWA) is never
-        // fully quit.
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true
@@ -64,6 +54,6 @@ export default defineConfig({
     })
   ],
   server: {
-    host: true // allows testing from a phone on the same wifi during dev
+    host: true
   }
 })

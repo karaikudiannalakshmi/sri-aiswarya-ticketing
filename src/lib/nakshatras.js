@@ -1,7 +1,3 @@
-// The 27 Nakshatras (birth stars) used in Tamil/Vedic astrology, in their
-// standard order. Tamil name is what's shown and printed since that's
-// what devotees and operators use day to day; English name is kept for
-// reference/search only.
 export const NAKSHATRAS = [
   { ta: 'அசுவினி', en: 'Ashwini' },
   { ta: 'பரணி', en: 'Bharani' },

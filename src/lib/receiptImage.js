@@ -1,24 +1,8 @@
-// Cheap ESC/POS thermal printers only have English/Latin glyphs built in -
-// they cannot render Tamil text no matter what bytes you send them, even
-// with a Tamil font installed on the phone/PC. The only reliable fix is to
-// draw the whole receipt as a picture (using a Tamil-capable web font) and
-// send that picture to the printer as a raster bitmap - printers support
-// bitmap printing universally since it doesn't depend on the printer
-// having a matching font at all, only on it being able to fire dots.
-//
-// This does mean printing is slightly slower than plain text (an image is
-// more bytes than a string), and there's no way to make part of the
-// receipt bold/selected by the printer itself - all styling has to be
-// baked into the picture, which is what the canvas drawing below does.
-
-const DEFAULT_WIDTH_DOTS = 384 // 384 = common 58mm printer, 576 = 80mm printer
+const DEFAULT_WIDTH_DOTS = 384
 const FONT_STACK = '"Noto Sans Tamil", sans-serif'
 const DEFAULT_TEMPLE_ADDRESS = 'கம்பன் கோட்டம், இல. 11, இராமகிருஷ்ண தோட்டம், கொழும்பு-06'
 
 async function ensureFontLoaded() {
-  // Force the browser to actually fetch/parse the bundled Tamil font
-  // before we draw with it - otherwise the first receipt can render with
-  // tofu boxes because the font loads asynchronously.
   await Promise.all([
     document.fonts.load(`bold 28px ${FONT_STACK}`),
     document.fonts.load(`28px ${FONT_STACK}`),
@@ -48,9 +32,6 @@ function formatMoney(amount) {
   return `LKR ${Number(amount).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-// Renders the receipt to a canvas sized exactly to its content and returns
-// it. A generous scratch canvas is used first since we don't know the
-// final height until we've laid out all the (possibly wrapped) lines.
 async function renderReceiptCanvas(fields, widthDots) {
   await ensureFontLoaded()
 
@@ -108,9 +89,6 @@ async function renderReceiptCanvas(fields, widthDots) {
   divider()
 
   if (fields.kind === 'donation') {
-    // Donation receipts get their own heading, and lead with the donor's
-    // details rather than a "ticket name" - this is a receipt of what
-    // someone gave, not a ticket for what they're attending.
     center('DONATION RECEIPT', sectionHeading, 30)
     center('நன்கொடை ரசீது', ticketTamil, 32)
     divider()
@@ -166,7 +144,7 @@ async function renderReceiptCanvas(fields, widthDots) {
   }
   y += 24
 
-  const finalHeight = Math.ceil(y / 8) * 8 // raster rows must be a multiple of 8
+  const finalHeight = Math.ceil(y / 8) * 8
   const final = document.createElement('canvas')
   final.width = widthDots
   final.height = finalHeight
@@ -174,8 +152,6 @@ async function renderReceiptCanvas(fields, widthDots) {
   return final
 }
 
-// Converts a canvas to ESC/POS "GS v 0" raster bitmap bytes (monochrome,
-// 1 bit per pixel, MSB-first). widthDots must be a multiple of 8.
 function canvasToRasterBytes(canvas, { threshold = 200 } = {}) {
   const { width, height } = canvas
   const ctx = canvas.getContext('2d')
@@ -211,8 +187,6 @@ function canvasToRasterBytes(canvas, { threshold = 200 } = {}) {
   return out
 }
 
-// Builds the complete byte sequence to send to the printer: init, the
-// bilingual receipt image, feed, and a partial cut.
 export async function buildBilingualTicketReceipt({
   templeName = 'Sri Aishwarya Lakshmi Temple, Colombo',
   templeNameTamil = 'ஸ்ரீ ஐசுவர்ய லட்சுமி திருக்கோயில், கொழும்பு',

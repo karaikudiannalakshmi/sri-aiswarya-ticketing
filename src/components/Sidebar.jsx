@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Ticket, ListChecks, Hash, Menu, X, LogOut } from 'lucide-react'
+import { LayoutDashboard, Ticket, ListChecks, Hash, Mail, Users, Menu, X, LogOut } from 'lucide-react'
 import { logout } from '../firebase'
 
 const ADMIN_NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/issue', label: 'Issue Ticket', icon: Ticket },
   { to: '/admin', label: 'Manage Ticket Types', icon: ListChecks },
-  { to: '/receipt-numbering', label: 'Receipt Numbering', icon: Hash }
+  { to: '/receipt-numbering', label: 'Receipt Numbering', icon: Hash },
+  { to: '/letters', label: 'Recognition Letters', icon: Mail },
+  { to: '/devotees', label: 'Devotee Directory', icon: Users }
 ]
 
 const OPERATOR_NAV = [{ to: '/issue', label: 'Issue Ticket', icon: Ticket, end: true }]

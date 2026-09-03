@@ -22,18 +22,6 @@ export const app = initializeApp(firebaseConfig)
 export const db = getFirestore(app)
 export const auth = getAuth(app)
 
-// Real Firebase Authentication (email/password) rather than a shared
-// app-level password, so Firestore security rules can tell an admin from
-// an operator server-side - a locked-down UI alone can't stop someone
-// from writing to Firestore directly with the browser console, but rules
-// keyed off a real signed-in identity can.
-//
-// There are two fixed accounts (their emails come from env vars so this
-// project doesn't need real staff email addresses): one for Admin, one
-// shared Operator account for counter staff. Each account's role is
-// looked up from Firestore (`roles/{uid}`) after sign-in - that document
-// has to be created once, by hand, in the Firebase console (see README).
-
 export function roleEmail(role) {
   return role === 'admin'
     ? import.meta.env.VITE_ADMIN_EMAIL
@@ -56,8 +44,6 @@ export function logout() {
   return firebaseSignOut(auth)
 }
 
-// Looks up this user's role from Firestore. Returns null if no role
-// document has been set up for them yet (treated as "no access").
 export async function fetchMyRole(uid) {
   const snap = await getDoc(doc(db, 'roles', uid))
   return snap.exists() ? snap.data().role : null

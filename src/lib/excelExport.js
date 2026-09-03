@@ -1,7 +1,5 @@
 import * as XLSX from 'xlsx'
 
-// Builds and downloads an .xlsx with two sheets: a per-sale transaction
-// list, and a summary (count + total) grouped by ticket type.
 export function exportSalesToExcel(sales, { filename = 'report.xlsx', title = 'Report' } = {}) {
   const wb = XLSX.utils.book_new()
 
@@ -24,11 +22,6 @@ export function exportSalesToExcel(sales, { filename = 'report.xlsx', title = 'R
     }))
 
   const grandTotal = sales.reduce((sum, s) => sum + Number(s.price || 0), 0)
-  // A blank spacer row, then a TOTAL row right under the transaction
-  // list itself - not just on the separate Summary tab - since that's
-  // the total most people look for first and shouldn't require
-  // switching sheets to find. Every key from the data rows is included
-  // (even if blank) so the columns line up correctly.
   const blankRow = {
     'Receipt No': '',
     Type: '',
@@ -52,18 +45,18 @@ export function exportSalesToExcel(sales, { filename = 'report.xlsx', title = 'R
 
   const txnSheet = XLSX.utils.json_to_sheet(txnRows)
   txnSheet['!cols'] = [
-    { wch: 18 }, // receipt no
-    { wch: 12 }, // type
-    { wch: 20 }, // date/time
-    { wch: 24 }, // ticket type
-    { wch: 24 }, // ticket type tamil
-    { wch: 20 }, // name
-    { wch: 16 }, // nakshatra
-    { wch: 16 }, // phone
-    { wch: 28 }, // donor address
-    { wch: 14 }, // amount
-    { wch: 16 }, // operator
-    { wch: 8 } // printed
+    { wch: 18 },
+    { wch: 12 },
+    { wch: 20 },
+    { wch: 24 },
+    { wch: 24 },
+    { wch: 20 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 28 },
+    { wch: 14 },
+    { wch: 16 },
+    { wch: 8 }
   ]
   XLSX.utils.book_append_sheet(wb, txnSheet, 'Transactions')
 
