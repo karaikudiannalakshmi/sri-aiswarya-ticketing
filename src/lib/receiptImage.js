@@ -1,4 +1,4 @@
-const DEFAULT_WIDTH_DOTS = 384
+const DEFAULT_WIDTH_DOTS = 576 // 384 = common 58mm printer, 576 = 80mm printer
 const FONT_STACK = '"Noto Sans Tamil", sans-serif'
 const DEFAULT_TEMPLE_ADDRESS = 'கம்பன் கோட்டம், இல. 11, இராமகிருஷ்ண தோட்டம், கொழும்பு-06'
 

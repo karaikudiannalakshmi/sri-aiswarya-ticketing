@@ -6,7 +6,8 @@ import {
   isConnected,
   availableTransports,
   getTransport,
-  printBytes
+  printBytes,
+  getPaperWidthDots
 } from '../lib/printer'
 import { buildBilingualTicketReceipt } from '../lib/receiptImage'
 import { printReceiptViaSystemDialog } from '../lib/receiptSystemPrint'
@@ -214,7 +215,10 @@ export default function TicketIssue() {
       if (!isConnected()) {
         throw new Error('Connect a printer first (Bluetooth or USB, above).')
       }
-      const bytes = await buildBilingualTicketReceipt(receiptFieldsFor(lastSale))
+      const bytes = await buildBilingualTicketReceipt({
+        ...receiptFieldsFor(lastSale),
+        widthDots: getPaperWidthDots()
+      })
       await printBytes(bytes)
       await markSalePrinted(lastSale.id)
       setMessage('Printed ' + lastSale.receiptNo)

@@ -13,7 +13,7 @@ export function setTransport(transport) {
 }
 
 export function getPaperWidthDots() {
-  return Number(localStorage.getItem(PAPER_WIDTH_KEY)) || 384
+  return Number(localStorage.getItem(PAPER_WIDTH_KEY)) || 576
 }
 
 export function setPaperWidthDots(widthDots) {
