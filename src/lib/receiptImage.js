@@ -189,7 +189,7 @@ function canvasToRasterBytes(canvas, { threshold = 200 } = {}) {
 
 export async function buildBilingualTicketReceipt({
   templeName = 'Sri Aishwarya Lakshmi Temple, Colombo',
-  templeNameTamil = 'ஸ்ரீ ஐசுவர்ய லட்சுமி திருக்கோயில், கொழும்பு',
+  templeNameTamil = 'ஸ்ரீ ஐஸ்வர்ய லக்ஷ்மி திருக்கோயில், கொழும்பு',
   templeAddress = DEFAULT_TEMPLE_ADDRESS,
   ticketName,
   ticketNameTamil,

@@ -1,4 +1,4 @@
-const DEFAULT_TEMPLE_NAME_TAMIL = 'ஸ்ரீ ஐசுவர்ய லட்சுமி திருக்கோயில், கொழும்பு'
+const DEFAULT_TEMPLE_NAME_TAMIL = 'ஸ்ரீ ஐஸ்வர்ய லக்ஷ்மி திருக்கோயில், கொழும்பு'
 const DEFAULT_TEMPLE_ADDRESS_TAMIL = 'கம்பன் கோட்டம், இல. 11, இராமகிருஷ்ண தோட்டம், கொழும்பு-06'
 const DEFAULT_TEMPLE_PHONE = ''
 
