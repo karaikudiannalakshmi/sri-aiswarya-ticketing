@@ -23,6 +23,7 @@ export default function TicketIssue() {
   const [nakshatra, setNakshatra] = useState('')
   const [phone, setPhone] = useState('')
   const [phoneMatches, setPhoneMatches] = useState([])
+  const [nameSource, setNameSource] = useState(null) // null | 'match' | 'new'
   const [donorAddress, setDonorAddress] = useState('')
   const [donationAmount, setDonationAmount] = useState('')
   const [quickCode, setQuickCode] = useState('')
@@ -49,16 +50,35 @@ export default function TicketIssue() {
       return
     }
     const timer = setTimeout(() => {
-      lookupDevoteesByPhone(phone).then(setPhoneMatches)
+      lookupDevoteesByPhone(phone).then((matches) => {
+        setPhoneMatches(matches)
+        // Only one name has ever been used with this number - fill it in
+        // automatically so the operator doesn't have to tap it. They can
+        // still overwrite it, or tap "New name" if this is a different person.
+        if (matches.length === 1) {
+          applyPhoneMatch(matches[0])
+        }
+      })
     }, 400)
     return () => clearTimeout(timer)
   }, [phone])
 
-  function selectPhoneMatch(entry) {
+  function applyPhoneMatch(entry) {
     setName(entry.name)
     if (entry.nakshatra) setNakshatra(entry.nakshatra)
     if (entry.address) setDonorAddress(entry.address)
-    setPhoneMatches([])
+    setNameSource('match')
+  }
+
+  function selectPhoneMatch(entry) {
+    applyPhoneMatch(entry)
+  }
+
+  function handleUseNewName() {
+    setName('')
+    setNakshatra('')
+    setDonorAddress('')
+    setNameSource('new')
   }
 
   function resetDetails(ticket) {
@@ -66,6 +86,7 @@ export default function TicketIssue() {
     setNakshatra('')
     setPhone('')
     setPhoneMatches([])
+    setNameSource(null)
     setDonorAddress('')
     setDonationAmount(ticket.kind === 'donation' ? String(ticket.price) : '')
   }
@@ -367,25 +388,62 @@ export default function TicketIssue() {
               placeholder="Phone number"
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
             />
-            {phoneMatches.length > 0 && (
+            {phoneMatches.length > 0 && nameSource !== 'new' && (
               <div className="border border-temple-gold/50 bg-temple-cream rounded-lg p-2 space-y-1">
-                <p className="text-xs text-gray-500 px-1">
-                  Found under this number - tap to fill in:
-                </p>
-                {phoneMatches.map((entry, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => selectPhoneMatch(entry)}
-                    className="w-full text-left bg-white rounded-lg px-3 py-2 text-sm border border-gray-200 active:scale-95 transition"
-                  >
-                    <span className="font-medium">{entry.name}</span>
-                    {entry.nakshatra && (
-                      <span className="text-gray-400"> · {entry.nakshatra}</span>
-                    )}
-                  </button>
-                ))}
+                {nameSource === 'match' ? (
+                  <div className="flex items-center justify-between gap-2 px-1 py-1">
+                    <p className="text-xs text-gray-600">
+                      Filled from a previous visit:{' '}
+                      <span className="font-medium text-gray-800">{name}</span>
+                      {nakshatra && <span className="text-gray-400"> · {nakshatra}</span>}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleUseNewName}
+                      className="text-xs text-temple-maroon font-medium underline shrink-0"
+                    >
+                      Not them? New name
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-gray-500 px-1">
+                      {phoneMatches.length === 1
+                        ? 'Found under this number:'
+                        : 'Found under this number - tap to fill in:'}
+                    </p>
+                    {phoneMatches.map((entry, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => selectPhoneMatch(entry)}
+                        className="w-full text-left bg-white rounded-lg px-3 py-2 text-sm border border-gray-200 active:scale-95 transition"
+                      >
+                        <span className="font-medium">{entry.name}</span>
+                        {entry.nakshatra && (
+                          <span className="text-gray-400"> · {entry.nakshatra}</span>
+                        )}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={handleUseNewName}
+                      className="w-full text-left text-temple-maroon text-sm font-medium px-3 py-2"
+                    >
+                      + Add new name for this number
+                    </button>
+                  </>
+                )}
               </div>
+            )}
+            {nameSource === 'new' && phoneMatches.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setNameSource(null)}
+                className="text-xs text-temple-maroon font-medium underline px-1"
+              >
+                Use a saved name for this number instead
+              </button>
             )}
             <input
               value={name}
